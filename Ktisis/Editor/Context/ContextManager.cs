@@ -46,7 +46,7 @@ public class ContextManager : IDisposable {
 	
 	// Context setup
 
-	private void SetupEditor() {
+	public void SetupEditor() {
 		if (!this._isInit || this._plugin == null)
 			throw new Exception("Attempted to setup uninitialized context.");
 		
