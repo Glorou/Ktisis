@@ -47,7 +47,8 @@ public class EditorInterface : IEditorInterface {
 
 	public void Prepare() {
 		if (this._ctx.Config.Editor.OpenOnEnterGPose)
-			this._gui.GetOrCreate<WorkspaceWindow>(this._ctx).Open();
+			this._gui.GetOrCreate<ToolbarWindow>(this._ctx, this._gui).Open();
+			// this._gui.GetOrCreate<WorkspaceWindow>(this._ctx).Open();
 
 		this._ctx.Selection.Changed += this.OnSelectChanged;
 
@@ -123,7 +124,11 @@ public class EditorInterface : IEditorInterface {
 			ImGui.SetWindowFocus(_win.WindowName);
 		}
 	}
-
+	public ObjectWindow GetObjectWindow() {
+		var gizmo = this._gizmo.Create(GizmoId.TransformEditor);
+		return this._gui.GetOrCreate<ObjectWindow>(this._ctx, new Gizmo2D(gizmo), this._gui);
+	}
+	
 	public void OpenObjectEditor(SceneEntity entity, bool forceOpen = false) {
 		entity.Select(SelectMode.Force);
 		this.OpenObjectEditor(forceOpen);
