@@ -1,8 +1,14 @@
+using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+
+using FFXIVClientStructs;
+
 using GLib.Widgets;
 
 using Ktisis.Editor.Context.Types;
@@ -11,11 +17,14 @@ using Ktisis.Interface.Components.Workspace;
 using Ktisis.Interface.Editor.Types;
 using Ktisis.Interface.Types;
 using Ktisis.Interface.Windows.Editors;
+using Ktisis.Interface.Windows.ToolbarModules;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Modules;
 
 namespace Ktisis.Interface.Windows;
+internal record WindowButtons(DrawContentDelegate Window, FontAwesomeIcon Icon, string TooltipText);
+internal delegate void DrawContentDelegate();
 
 public class ToolbarWindow : KtisisWindow {
 	private readonly IEditorContext _ctx;
@@ -24,14 +33,31 @@ public class ToolbarWindow : KtisisWindow {
 	private readonly WorkspaceState _workspace;
 	private IEditorInterface Interface => this._ctx.Interface;
 
+	private List<WindowButtons> _buttons; 
 	public ToolbarWindow(
 		IEditorContext ctx,
 		GuiManager gui
 	) : base("Ktisis Toolbar") {
 		this._ctx = ctx;
 		this._gui = gui;
-
+		this.Flags = ImGuiWindowFlags.AlwaysAutoResize | this.Flags;
 		this._workspace = new WorkspaceState(ctx);
+		this._buttons =  new() {
+			new(this.DrawWorkspaceWindow, FontAwesomeIcon.PersonThroughWindow, "Workspace"),
+			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsSplitUpAndLeft, "Object Editor"),
+			new(this.DrawActorWindow, FontAwesomeIcon.PersonChalkboard, "Actor Editor"),
+			new(this.DrawPosingWindow, FontAwesomeIcon.PersonBooth, "Pose View"),
+			new(this.DrawEnvWindow, FontAwesomeIcon.CloudSun, "Environment Editor"),
+			new(this.DrawCameraWindow, FontAwesomeIcon.CameraRetro, "Camera Editor"),
+			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings"),
+		};
+		this.SizeConstraints = new WindowSizeConstraints(){MaximumSize = new Vector2(-1, float.MaxValue),  MinimumSize = new Vector2(-1, 0)};
+		
+	}
+
+	public override void PreDraw() {
+		base.PreDraw();
+		this.Size = Vector2.Zero;
 	}
 
 	public override void PreOpenCheck() {
@@ -42,12 +68,18 @@ public class ToolbarWindow : KtisisWindow {
 
 	public override void Draw() {
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
-
+		
 		// WorkspaceState
 		this._workspace.Draw();
 		ImGui.Spacing();
-
+		
 		// Subwindow Buttons
+		foreach (var button in _buttons) {
+			if (Buttons.IconButtonTooltip(button.Icon, button.TooltipText, new Vector2(48, 48)))
+				button.Window();
+			ImGui.SameLine(0, spacing * 2);
+		}
+		/*
 		if (Buttons.IconButtonTooltip(FontAwesomeIcon.PersonThroughWindow, "Workspace", new Vector2(48, 48)))
 			this.SetSubWindow<WorkspaceWindow>();
 		ImGui.SameLine(0, spacing * 2);
@@ -68,17 +100,26 @@ public class ToolbarWindow : KtisisWindow {
 		ImGui.SameLine(0, spacing * 2);
 		if (Buttons.IconButtonTooltip(FontAwesomeIcon.Cogs, "Settings", new Vector2(48, 48)))
 			this.SetSubWindow<ConfigWindow>();
-		ImGui.SameLine(0, spacing * 2);
+		ImGui.SameLine(0, spacing * 2);*/
 
 		// Subwindow
 		if (this._subWindow != null) {
 			ImGui.Spacing();
 			ImGui.Spacing();
-			using var _frame = ImRaii.Child("##SubWindowFrame", ImGui.GetContentRegionAvail(), true);
+			this.Size += new Vector2(0, 300);
+			using var _frame = ImRaii.Group();
 			this._subWindow.Draw();
-		}
+		} 
 	}
 
+	private void DrawWorkspaceWindow() => this.SetSubWindow<Workspace>();
+	private void DrawObjectWindow() => this.SetSubWindow<ObjectWindow>();
+	private void DrawActorWindow() => this.SetSubWindow<ActorWindow>();
+	private void DrawPosingWindow() => this.SetSubWindow<PosingWindow>();
+	private void DrawEnvWindow() => this.SetSubWindow<EnvWindow>();
+	private void DrawCameraWindow() => this.SetSubWindow<CameraWindow>();
+	private void DrawConfigWindow() => this.SetSubWindow<ConfigWindow>();
+	
 	private void SetSubWindow<T>() where T : KtisisWindow {
 		if (this._subWindow?.GetType() == typeof(T)) {
 			this._subWindow.OnClose();
@@ -95,7 +136,7 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = this._gui.GetOrCreate<ConfigWindow>();
 		}
 		this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
-
+		
 		// handle window followup actions
 		if (this._subWindow is ActorWindow win) {
 			var target = this._ctx.Selection.GetFirstSelected();

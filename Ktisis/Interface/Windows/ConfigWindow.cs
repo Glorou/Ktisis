@@ -121,7 +121,7 @@ public class ConfigWindow : KtisisWindow {
 
 		ImGui.TableNextColumn();
 		var avail = ImGui.GetContentRegionAvail();
-		using var _frame = ImRaii.Child("##ConfigContent", avail, false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize);
+		using var _frame = ImRaii.Group();
 		var (_, drawFn) = this.Tabs[this._tabIndex];
 		drawFn();
 	}
