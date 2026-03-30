@@ -38,7 +38,7 @@ public class CameraWindow : KtisisWindow {
 		this._relativePos = relativePos;
 	}
 
-	protected private const TransformTableFlags TransformFlags = TransformTableFlags.Default | TransformTableFlags.UseAvailable & ~TransformTableFlags.Operation;
+	private const TransformTableFlags TransformFlags = TransformTableFlags.Default | TransformTableFlags.UseAvailable;
 
 	public override void PreOpenCheck() {
 		if (this._ctx is { IsValid: true, Cameras.Current: not null }) return;

@@ -51,7 +51,7 @@ public class ActionKeybindEditor {
 	public void Draw(string? pattern = null) {
 		// TODO: allow sorting that isnt alphabetical
 		using var pad = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero);
-		using var frame = ImRaii.Child("##CfgStyleFrame", ImGui.GetContentRegionAvail(), false);
+		using var frame = ImRaii.Child("##CfgStyleFrame", Vector2.Zero, false);
 		if (!frame.Success) return;
 
 		using var tablePad = ImRaii.PushStyle(ImGuiStyleVar.CellPadding, Vector2.Zero);

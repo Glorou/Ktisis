@@ -121,7 +121,7 @@ public class ObjectWindow : KtisisWindow {
 		var table = this._table.Draw(
 			transform,
 			out var result,
-			TransformTableFlags.Default | TransformTableFlags.UseAvailable
+			TransformTableFlags.Default | TransformTableFlags.UseAvailable | TransformTableFlags.Operation
 		);
 		if (table) transform = result;
 		isEnded |= this._table.IsDeactivated;
