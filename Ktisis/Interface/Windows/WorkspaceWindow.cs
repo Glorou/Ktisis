@@ -67,7 +67,7 @@ public class WorkspaceWindow : KtisisWindow {
 		this._workspace.Draw();
 
 		var botHeight = (UiBuilder.DefaultFontSizePx + (style.ItemSpacing.Y + style.ItemInnerSpacing.Y) * 2) * ImGuiHelpers.GlobalScale;
-		var treeHeight = Math.Min(ImGui.GetContentRegionAvail().Y, ImGui.GetTextLineHeightWithSpacing()*10) - botHeight;
+		var treeHeight = Math.Max(ImGui.GetContentRegionAvail().Y, ImGui.GetTextLineHeightWithSpacing()*10) - botHeight;
 		this._sceneTree.Draw(treeHeight);
 
 		ImGui.Spacing();

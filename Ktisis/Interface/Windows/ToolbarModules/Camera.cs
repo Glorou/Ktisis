@@ -9,5 +9,5 @@ public class Camera : CameraWindow {
 	{
 	}
 	
-	private new const TransformTableFlags TransformFlags = TransformTableFlags.Default  & ~TransformTableFlags.Operation;
+	private new const TransformTableFlags TransformFlags = TransformTableFlags.Default & ~TransformTableFlags.Operation;
 }
