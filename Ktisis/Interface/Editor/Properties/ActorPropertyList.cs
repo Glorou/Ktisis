@@ -208,7 +208,9 @@ public class ActorPropertyList : ObjectPropertyList {
 			+ Icons.CalcIconSize(FontAwesomeIcon.LocationArrow).X
 			+ spacing * 3;
 		ImGui.SameLine(0, spacing);
-		ImGui.SameLine(0, ImGui.GetContentRegionAvail().X - btnSpace);
+
+		ImGui.SameLine(0, 0);
+		ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - btnSpace - 8);  //TODO: Fix this with a calc, not 8
 
 		// camera tracking - when pressed, toggle enabled and change gaze mode to KtisisFollowCam (or revert to Target mode)
 		using (ImRaii.PushColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive), isTracking)) {

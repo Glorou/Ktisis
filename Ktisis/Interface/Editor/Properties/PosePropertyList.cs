@@ -159,7 +159,8 @@ public class PosePropertyList : ObjectPropertyList {
 
 			ImGui.SameLine(0, spacing);
 			
-			ImGui.SameLine(0, ImGui.GetWindowSize().X - btnSpace);
+			ImGui.SameLine(0, 0);
+			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - btnSpace - 8); //TODO: Fix this with a calc, not 8
 
 			using (ImRaii.PushColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive), node.IsSelected)) {
 				var canSelect = !node.IsSelected || this._ctx.Selection.Count > 1;
