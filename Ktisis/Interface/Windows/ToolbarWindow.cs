@@ -116,8 +116,8 @@ public class ToolbarWindow : KtisisWindow {
 	private void DrawObjectWindow() => this.SetSubWindow<ObjectWindow>();
 	private void DrawActorWindow() => this.SetSubWindow<ActorWindow>();
 	private void DrawPosingWindow() => this.SetSubWindow<PosingWindow>();
-	private void DrawEnvWindow() => this.SetSubWindow<EnvWindow>();
-	private void DrawCameraWindow() => this.SetSubWindow<CameraWindow>();
+	private void DrawEnvWindow() => this.SetSubWindow<Env>();
+	private void DrawCameraWindow() => this.SetSubWindow<Camera>();
 	private void DrawConfigWindow() => this.SetSubWindow<ConfigWindow>();
 	
 	private void SetSubWindow<T>() where T : KtisisWindow {
@@ -127,15 +127,17 @@ public class ToolbarWindow : KtisisWindow {
 			return;
 		}
 
-		if (typeof(T) == typeof(EnvWindow)) {
+		if (typeof(T) == typeof(Env)) {
 			var module = this._ctx.Scene.GetModule<EnvModule>();
-			this._subWindow = this._gui.GetOrCreate<EnvWindow>(this._ctx, module);
+			this._subWindow = this._gui.GetOrCreate<Env>(this._ctx.Scene, module);
 		} else if (typeof(T) == typeof(ObjectWindow)) {
 			this._subWindow = this.Interface.GetObjectWindow();
 		} else if (typeof(T) == typeof(ConfigWindow)) {
 			this._subWindow = this._gui.GetOrCreate<ConfigWindow>();
+		} else {
+			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
 		}
-		this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
+
 		
 		// handle window followup actions
 		if (this._subWindow is ActorWindow win) {

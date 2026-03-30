@@ -38,7 +38,7 @@ public class CameraWindow : KtisisWindow {
 		this._relativePos = relativePos;
 	}
 
-	private const TransformTableFlags TransformFlags = TransformTableFlags.Default | TransformTableFlags.UseAvailable & ~TransformTableFlags.Operation;
+	protected private const TransformTableFlags TransformFlags = TransformTableFlags.Default  & ~TransformTableFlags.Operation;
 
 	public override void PreOpenCheck() {
 		if (this._ctx is { IsValid: true, Cameras.Current: not null }) return;
@@ -136,7 +136,7 @@ public class CameraWindow : KtisisWindow {
 			ImGui.TextDisabled(text);
 		
 		ImGui.SameLine();
-		ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - Buttons.CalcSize());
+		ImGui.SetCursorPosX(ImGuiP.GetCurrentWindow().WorkRect.GetWidth() - (Buttons.CalcSize() - 5)); //fuckin good enough
 		if (Buttons.IconButtonTooltip(FontAwesomeIcon.Sync, this._ctx.Locale.Translate("camera_edit.offset.to_target"))) {
 			var gameObject = (GameObject*)target.Address;
 			var drawObject = gameObject->DrawObject;
