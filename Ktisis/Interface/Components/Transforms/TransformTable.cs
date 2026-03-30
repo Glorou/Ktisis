@@ -110,7 +110,7 @@ public class TransformTable {
 		this.IsDeactivated = false;
 		
 		var useAvail = flags.HasFlag(TransformTableFlags.UseAvailable);
-		using var __ = ImRaii.ItemWidth(useAvail ? ImGui.GetContentRegionAvail().X : CalcTableWidth());
+		using var __ = ImRaii.ItemWidth(useAvail ? ImGui.GetContentRegionAvail().X - 30 : CalcTableWidth());
 
 		var operation = flags.HasFlag(TransformTableFlags.Operation);
 		this.DrawPosition(ref position, operation);
