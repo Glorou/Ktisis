@@ -155,12 +155,12 @@ public class PosePropertyList : ObjectPropertyList {
 
 			var btnSpace = Icons.CalcIconSize(FontAwesomeIcon.HandPointer).X
 				+ Icons.CalcIconSize(FontAwesomeIcon.EllipsisH).X
-				+ spacing * 3;
+				+ spacing * 5;
 
 			ImGui.SameLine(0, spacing);
 			
 			ImGui.SameLine(0, 0);
-			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - btnSpace - 8); //TODO: Fix this with a calc, not 8
+			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - btnSpace); 
 
 			using (ImRaii.PushColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive), node.IsSelected)) {
 				var canSelect = !node.IsSelected || this._ctx.Selection.Count > 1;
