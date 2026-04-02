@@ -35,7 +35,14 @@
 		"Camera_Work_Fast": "Work camera fast-speed modifier",
 		"Camera_Work_Slow": "Work camera slow-speed modifier",
 		"Pose_FlipPose": "Flip pose",
-		"Gizmo_MirrorRotation": "Cycle rotation modes"
+		"Gizmo_MirrorRotation": "Cycle rotation modes",
+		"Toolbar_ToggleWorkspace": "Switch to the Workspace Window",
+		"Toolbar_ToggleObject": "Switch to the Object Editor",
+		"Toolbar_ToggleActor": "Switch to the Actor Editor",
+		"Toolbar_TogglePose": "Switch to Pose View",
+		"Toolbar_ToggleEnv": "Switch to the Environment Editor",
+		"Toolbar_ToggleCamera": "Switch to the Camera Editor",
+		"Toolbar_ToggleConfig": "Switch to the Configuration Window"
 	},
 	
 	"actors": {
@@ -316,11 +323,13 @@
 			"init": "Open workspace when entering GPose",
 			"toggleOpenWindows": "UI buttons toggle windows open & closed",
 			"initPosLock": "Freeze actor positions when entering GPose",
+			"toolbar": "Replace the normal Ktisis Layout with the Toolbar",
 			"editOnSelect": "Open object editor when selecting from the workspace",
 			"closeOnDeselect": "Close object editor when nothing is selected",
 			"incognitoPlayerNames": "Incognito Mode",
 			"hintIncognito": "Censors all player names from actor list and GPose window",
 			"hintPosLock": "WIP: If enabled, GPose actors should spawn at their overworld coordinates and be movable while animating.",
+			"hintToolbar": "Reenter GPose to take effect",
 			"hintInit": "If disabled, you can open the Ktisis Workspace by typing /ktisis while in GPose",
 			"windowHeader": "Window Behavior Options",
 			"legacyHeader": "Legacy Interface Options [will be deprecated with v0.3 release]",
@@ -364,6 +373,10 @@
 			"gizmo": {
 				"title": "Gizmo",
 				"header": "Gizmo Actions:"
+			},
+			"toolbar":{
+				"title": "Toolbar",
+				"header": "Toolbar Controls:"
 			}
 		},
 		"autosave": {

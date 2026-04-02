@@ -78,6 +78,7 @@ public class ConfigWindow : KtisisWindow {
 			(this.Locale.Translate("config.input.title"), this.DrawInputTab),
 			(this.Locale.Translate("config.input.cameras.title"), this.DrawCamerasInputTab),
 			(this.Locale.Translate("config.input.gizmo.title"), this.DrawGizmoInputTab),
+			(this.Locale.Translate("config.input.toolbar.title"), this.DrawToolbarInputTab),
 			(this.Locale.Translate("config.about.title"), this.DrawAboutTab)
 		];
 	}
@@ -116,8 +117,8 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.TableNextColumn();
 		this.DrawTabNode(0, [1, 2]);
 		this.DrawTabNode(3, [4, 5, 6, 7]);
-		this.DrawTabNode(8, [9, 10]);
-		this.DrawTabNode(11);
+		this.DrawTabNode(8, [9, 10, 11]);
+		this.DrawTabNode(12);
 
 		ImGui.TableNextColumn();
 		var avail = ImGui.GetContentRegionAvail();
@@ -204,7 +205,9 @@ public class ConfigWindow : KtisisWindow {
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.initPosLock"), ref this.Config.Editor.InitPosLock);
-		this.DrawHint("config.workspace.hintPosLock");
+		//this.DrawHint("config.workspace.hintPosLock");
+		ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar);
+		this.DrawHint("config.workspace.hintToolbar");
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
@@ -270,6 +273,15 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Text(this.Locale.Translate("config.input.help"));
 		using var _disable = ImRaii.Disabled(!this.Config.Keybinds.Enabled);
 		this._keybinds.Draw("gizmo");
+	}
+	
+	private void DrawToolbarInputTab() {
+		ImGui.Text(this.Locale.Translate("config.input.toolbar.header"));
+		ImGui.Spacing();
+
+		ImGui.Text(this.Locale.Translate("config.input.help"));
+		using var _disable = ImRaii.Disabled(!this.Config.Keybinds.Enabled);
+		this._keybinds.Draw("toolbar");
 	}
 	
 	
