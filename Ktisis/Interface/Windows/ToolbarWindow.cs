@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Reflection;
 
@@ -41,11 +42,12 @@ public class ToolbarWindow : KtisisWindow {
 		this._ctx = ctx;
 		this._gui = gui;
 		this._workspace = new WorkspaceState(ctx);
+		this.Flags = this.Flags | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.AlwaysAutoResize;
 		this._buttons =  new() {
 			new(this.DrawWorkspaceWindow, FontAwesomeIcon.PersonThroughWindow, "Workspace"),
-			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsSplitUpAndLeft, "Object Editor"),
-			new(this.DrawActorWindow, FontAwesomeIcon.PersonChalkboard, "Actor Editor"),
-			new(this.DrawPosingWindow, FontAwesomeIcon.PersonBooth, "Pose View"),
+			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsAlt, "Object Editor"),
+			new(this.DrawActorWindow, FontAwesomeIcon.Walking, "Actor Editor"),
+			new(this.DrawPosingWindow, FontAwesomeIcon.Portrait, "Pose View"),
 			new(this.DrawEnvWindow, FontAwesomeIcon.CloudSun, "Environment Editor"),
 			new(this.DrawCameraWindow, FontAwesomeIcon.CameraRetro, "Camera Editor"),
 			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings"),
@@ -57,10 +59,10 @@ public class ToolbarWindow : KtisisWindow {
 	public override void PreDraw() {
 		base.PreDraw();
 		this.Size = Vector2.Zero;
-		if(this._subWindow == null)
+		/*if(this._subWindow == null)
 			this.Flags |= ImGuiWindowFlags.AlwaysAutoResize;
 		else 
-			this.Flags &= ~ImGuiWindowFlags.AlwaysAutoResize;
+			this.Flags &= ~ImGuiWindowFlags.AlwaysAutoResize;*/
 		
 	}
 
@@ -78,40 +80,46 @@ public class ToolbarWindow : KtisisWindow {
 		ImGui.Spacing();
 		
 		// Try to center it?
-		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing))) / 2) - 2;
+		
+		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing))-spacing) / 2);
 		ImGui.SetCursorPosX(offset);
+		
 		// Subwindow Buttons
 		foreach (var button in _buttons) {
 			if (Buttons.IconButtonTooltip(button.Icon, button.TooltipText, new Vector2(48, 48)))
 				button.Window();
-			ImGui.SameLine(0, spacing * 2);
+			if(button != this._buttons.Last())
+				ImGui.SameLine(0, spacing * 2);
 		}
 
 		// Subwindow
 		if (this._subWindow != null) {
 			ImGui.Spacing();
 			ImGui.Spacing();
-			this.Size += new Vector2(0, 300);
+			
 			using var _frame = ImRaii.Group();
 			this._subWindow.Draw();
+
 		} 
 	}
 
-	private void DrawWorkspaceWindow() => this.SetSubWindow<Workspace>();
-	private void DrawObjectWindow() => this.SetSubWindow<ObjectWindow>();
-	private void DrawActorWindow() => this.SetSubWindow<ActorWindow>();
-	private void DrawPosingWindow() => this.SetSubWindow<PosingWindow>();
-	private void DrawEnvWindow() => this.SetSubWindow<Env>();
-	private void DrawCameraWindow() => this.SetSubWindow<CameraWindow>();
-	private void DrawConfigWindow() => this.SetSubWindow<ConfigWindow>();
+	internal void DrawWorkspaceWindow() => this.SetSubWindow<Workspace>();
+	internal void DrawObjectWindow() => this.SetSubWindow<ObjectWindow>();
+	internal void DrawActorWindow() => this.SetSubWindow<ActorWindow>();
+	internal void DrawPosingWindow() => this.SetSubWindow<PosingWindow>();
+	internal void DrawEnvWindow() => this.SetSubWindow<Env>();
+	internal void DrawCameraWindow() => this.SetSubWindow<CameraWindow>();
+	internal void DrawConfigWindow() => this.SetSubWindow<ConfigWindow>();
 	
 	private void SetSubWindow<T>() where T : KtisisWindow {
+		if(this._subWindow?.GetType() ==  typeof(ObjectWindow) && typeof(T) != typeof(ObjectWindow))
+			this._subWindow?.Close();
 		if (this._subWindow?.GetType() == typeof(T)) {
 			this._subWindow.OnClose();
 			this._subWindow = null; // unset subwindow if same button clicked
 			return;
 		}
-
+		
 		if (typeof(T) == typeof(Env)) {
 			var module = this._ctx.Scene.GetModule<EnvModule>();
 			this._subWindow = this._gui.GetOrCreate<Env>(this._ctx.Scene, module);
@@ -123,7 +131,8 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
 		}
 
-		
+
+
 		// handle window followup actions
 		if (this._subWindow is ActorWindow win) {
 			var target = this._ctx.Selection.GetFirstSelected();
@@ -138,7 +147,6 @@ public class ToolbarWindow : KtisisWindow {
 			else
 				win.SetTarget(this._ctx.Scene.GetFirstActor());
 		}
-
 		this._subWindow.OnOpen();
 	}
 }
