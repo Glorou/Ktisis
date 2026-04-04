@@ -80,7 +80,8 @@ public class ToolbarWindow : KtisisWindow {
 		ImGui.Spacing();
 		
 		// Try to center it?
-		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing))) / 2) - 2;
+		
+		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing))-spacing) / 2);
 		ImGui.SetCursorPosX(offset);
 		
 		// Subwindow Buttons
@@ -99,8 +100,7 @@ public class ToolbarWindow : KtisisWindow {
 		if (this._subWindow != null) {
 			ImGui.Spacing();
 			ImGui.Spacing();
-
-
+			
 			using var _frame = ImRaii.Group();
 			this._subWindow.Draw();
 
@@ -123,8 +123,7 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = null; // unset subwindow if same button clicked
 			return;
 		}
-		ImGui.SetNextWindowSize(Vector2.Zero);
-
+		
 		if (typeof(T) == typeof(Env)) {
 			var module = this._ctx.Scene.GetModule<EnvModule>();
 			this._subWindow = this._gui.GetOrCreate<Env>(this._ctx.Scene, module);
