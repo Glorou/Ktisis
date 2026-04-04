@@ -15,8 +15,13 @@ using Ktisis.Structs.Characters;
 using Ktisis.Core.Attributes;
 using Ktisis.Editor.Characters.Make;
 using Ktisis.Editor.Characters.Types;
+using Ktisis.Editor.Context.Types;
 using Ktisis.Interface.Components.Chara.Popup;
 using Ktisis.Services.Data;
+
+using Lumina.Excel.Sheets;
+
+using Tribe = Ktisis.Structs.Characters.Tribe;
 
 namespace Ktisis.Interface.Components.Chara;
 
@@ -25,7 +30,8 @@ public class CustomizeEditorTab {
 	private readonly IDataManager _data;
 	private readonly ITextureProvider _tex;
 	private readonly CustomizeService _discovery;
-
+	private IEditorContext? _context;
+	
 	private readonly MakeTypeData _makeTypeData = new();
 
 	private readonly ParamColorSelectPopup _colorPopup = new();
@@ -42,14 +48,17 @@ public class CustomizeEditorTab {
 		this._tex = tex;
 		this._discovery = discovery;
 		this._featurePopup = new FeatureSelectPopup(tex);
+
 	}
 	
 	// Setup
 
 	private bool _isSetup;
 	
-	public void Setup() {
+	
+	public void Setup(IEditorContext ctx) {
 		if (this._isSetup) return;
+		this._context = ctx;
 		this._isSetup = true;
 		this._makeTypeData.Build(this._data, this._discovery).ContinueWith(task => {
 			if (task.Exception != null)
@@ -86,7 +95,14 @@ public class CustomizeEditorTab {
 
 	private void DrawSideFrame(MakeTypeRace data) {
 		var size = ImGui.GetContentRegionAvail();
+		
 		size.X = MathF.Max(size.X * SideRatio, 240.0f);
+
+		if (this._context.Config.Editor.UseToolbar)
+			size.Y = 420;
+		
+		
+
 		using var _frame = ImRaii.Child("##CustomizeSideFrame", size, true);
 
 		var cX = ImGui.GetCursorPosX();
