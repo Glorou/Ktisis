@@ -50,6 +50,7 @@ public class ToolbarWindow : KtisisWindow {
 			new(this.DrawPosingWindow, FontAwesomeIcon.Portrait, "Pose View"),
 			new(this.DrawEnvWindow, FontAwesomeIcon.CloudSun, "Environment Editor"),
 			new(this.DrawCameraWindow, FontAwesomeIcon.CameraRetro, "Camera Editor"),
+			//new(this.DrawConfigWindow, FontAwesomeIcon.G, "Scene Editor"),
 			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings"),
 		};
 		//this.SizeConstraints = new WindowSizeConstraints(){MaximumSize = new Vector2(-1, float.MaxValue),  MinimumSize = new Vector2(-1, 0)};
@@ -74,7 +75,6 @@ public class ToolbarWindow : KtisisWindow {
 
 	public override void Draw() {
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
-		
 		// WorkspaceState
 		this._workspace.Draw();
 		ImGui.Spacing();
@@ -90,12 +90,17 @@ public class ToolbarWindow : KtisisWindow {
 			if(button != this._buttons.Last())
 				ImGui.SameLine(0, spacing * 2);
 		}
+		
+		//Close editor if nothing selected	
+		//if (this._subWindow?.GetType() == typeof(ObjectWindow) && this._ctx.Selection.GetSelected().Count() == 0 && this._ctx.Config.Editor.CloseEditorOnDeselect)
+			//this._subWindow = null;
 
 		// Subwindow
 		if (this._subWindow != null) {
 			ImGui.Spacing();
 			ImGui.Spacing();
-			
+
+
 			using var _frame = ImRaii.Group();
 			this._subWindow.Draw();
 
@@ -118,7 +123,8 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = null; // unset subwindow if same button clicked
 			return;
 		}
-		
+		ImGui.SetNextWindowSize(Vector2.Zero);
+
 		if (typeof(T) == typeof(Env)) {
 			var module = this._ctx.Scene.GetModule<EnvModule>();
 			this._subWindow = this._gui.GetOrCreate<Env>(this._ctx.Scene, module);
@@ -126,7 +132,11 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = this.Interface.GetObjectWindow();
 		} else if (typeof(T) == typeof(ConfigWindow)) {
 			this._subWindow = this._gui.GetOrCreate<ConfigWindow>();
-		} else {
+		} else if(typeof(T) == typeof(ActorWindow))
+		{
+			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
+			this._subWindow.Size = new Vector2(0, 400);
+		}else {
 			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
 		}
 
