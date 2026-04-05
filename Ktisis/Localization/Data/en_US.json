@@ -347,6 +347,10 @@
 				"add": "Add New Location",
 				"moving": "Moving %name%",
 				"selectFolder": "Select Folder"
+			},
+			"defaultLocation": {
+				"set": "Set",
+				"reset": "Reset"
 			}
 		},
 		"input": {
