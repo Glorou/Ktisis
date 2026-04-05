@@ -205,7 +205,25 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.initPosLock"), ref this.Config.Editor.InitPosLock);
 		this.DrawHint("config.workspace.hintPosLock");
+		ImGui.Text("Default location to open file browser:");
+		ImGui.Text(this.Config.File.DefaultLocation == string.Empty ? "None" : this.Config.File.DefaultLocation);
+		ImGui.SameLine();
+		if (this.Config.File.DefaultLocation == string.Empty) {
+			if (ImGui.SmallButton(this.Locale.Translate("config.workspace.defaultLocation.set"))) {
+				this._gui.FileDialogs.OpenFolder(this.Locale.Translate("config.workspace.defaultLocation.selectFolder"), p => {
+					this.Config.File.DefaultLocation = p;
+					this._cfg.Save();
+				});
+			}
+		} else {
+				if (ImGui.SmallButton(this.Locale.Translate("config.workspace.defaultLocation.reset"))) {
+					this.Config.File.DefaultLocation = string.Empty;
+					this._cfg.Save();
+				}
+		}
 		ImGui.Spacing();
+	
+
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.toggleOpenWindows"), ref this.Config.Editor.ToggleOpenWindows);
