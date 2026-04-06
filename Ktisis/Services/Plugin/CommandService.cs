@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Command;
 using Dalamud.Plugin.Services;
 using HandlerDelegate = Dalamud.Game.Command.IReadOnlyCommandInfo.HandlerDelegate;
@@ -74,6 +75,17 @@ public class CommandService : IDisposable {
             ctx?.Interface.ToggleDebugWindow();
             return;
         }
+		
+		if (arguments.Contains("dump")) {
+			Ktisis.Log.Info("Dumping log to clipboard");
+			string clipboard = string.Empty;
+			var events = Ktisis.Log.Logs.ToArray();
+			foreach (var eventString in events) {
+				clipboard += eventString;
+			}
+			ImGui.SetClipboardText(clipboard);
+			return;
+		}
 
         ctx?.Interface.ToggleWorkspaceWindow();
     }

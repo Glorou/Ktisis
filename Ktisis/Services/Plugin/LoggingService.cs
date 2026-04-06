@@ -1,0 +1,117 @@
+﻿using System;
+using System.Collections.Generic;
+
+using Dalamud.Plugin.Services;
+
+using Ktisis.Core.Attributes;
+
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
+
+namespace Ktisis.Services.Plugin;
+
+[Singleton]
+public class LoggingService {
+
+	public IPluginLog DalamudLog { get; private set; } = null!;
+	
+	private readonly LoggingLevelSwitch levelSwitch;
+	public ILogger Logger { get; }
+
+	public Stack<string> Logs { get; } = new();
+	
+	public LoggingService(
+		IPluginLog logger
+	) {
+
+		DalamudLog = logger;
+		
+		this.levelSwitch = new LoggingLevelSwitch(this.GetDefaultLevel());
+
+		var loggerConfiguration = new LoggerConfiguration()
+			.Enrich.WithProperty("Dalamud.PluginName", "Ktisis")
+			.MinimumLevel.ControlledBy(this.levelSwitch)
+			.WriteTo.Logger(Log.Logger);
+		
+		this.Logger = loggerConfiguration.CreateLogger();
+		
+	}
+	
+	    /// <inheritdoc />
+    public void Fatal(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Fatal, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Fatal(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Fatal, exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Error(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Error, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Error(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Error, exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Warning(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Warning, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Warning(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Warning, exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Information(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Information, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Information(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Information, exception, messageTemplate, values);
+
+    /// <inheritdoc/>
+    public void Info(string messageTemplate, params object[] values) =>
+        this.Information(messageTemplate, values);
+
+    /// <inheritdoc/>
+    public void Info(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Information(exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Debug(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Debug, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Debug(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Debug, exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Verbose(string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Verbose, null, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Verbose(Exception? exception, string messageTemplate, params object[] values) =>
+        this.Write(LogEventLevel.Verbose, exception, messageTemplate, values);
+
+    /// <inheritdoc />
+    public void Write(LogEventLevel level, Exception? exception, string messageTemplate, params object[] values)
+    {
+
+		this.Logs.Push($"{level} : {messageTemplate}\n");
+		this.Logs.TrimExcess(50);
+        this.DalamudLog.Write(
+            level,
+            exception: exception,
+            messageTemplate: $"{messageTemplate}",
+            values);
+	}
+	private LogEventLevel GetDefaultLevel()
+	{
+		return  LogEventLevel.Verbose;
+	}
+	
+	
+}
+
+
