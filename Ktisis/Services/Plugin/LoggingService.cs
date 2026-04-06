@@ -98,7 +98,7 @@ public class LoggingService {
     public void Write(LogEventLevel level, Exception? exception, string messageTemplate, params object[] values)
     {
 
-		this.Logs.Push($"{level} : {messageTemplate}\n");
+		this.Logs.Push($"{DateTime.Now} | {level} : {messageTemplate}\n");
 		this.Logs.TrimExcess(50);
         this.DalamudLog.Write(
             level,
