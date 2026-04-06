@@ -80,7 +80,6 @@ public class CommandService : IDisposable {
 			Ktisis.Log.Info("Dumping log to clipboard");
 			string clipboard = string.Empty;
 			var events = Ktisis.Log.Logs.ToArray();
-			events.Reverse();
 			foreach (var eventString in events) {
 				clipboard += eventString;
 			}

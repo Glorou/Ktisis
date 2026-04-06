@@ -19,7 +19,7 @@ public class LoggingService {
 	private readonly LoggingLevelSwitch levelSwitch;
 	public ILogger Logger { get; }
 
-	public Stack<string> Logs { get; } = new();
+	public Queue<string> Logs { get; } = new();
 	
 	public LoggingService(
 		IPluginLog logger
@@ -98,8 +98,12 @@ public class LoggingService {
     public void Write(LogEventLevel level, Exception? exception, string messageTemplate, params object[] values)
     {
 
-		this.Logs.Push($"{DateTime.Now} | {level} : {messageTemplate}\n");
-		this.Logs.TrimExcess(50);
+		if(this.Logs.Count >= 50)
+			for (var i = this.Logs.Count; i >= 50; i--)
+				this.Logs.Dequeue();
+		
+		this.Logs.Enqueue($"{DateTime.Now} | {level} : {messageTemplate}\n");
+
         this.DalamudLog.Write(
             level,
             exception: exception,
