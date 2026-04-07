@@ -115,7 +115,7 @@ public class WorkspaceWindow : KtisisWindow {
 			this.Interface.OpenConfigWindow();
 
 		ImGui.SameLine(0, spacing);
-		ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X - Buttons.CalcSize() * 2 - spacing);
+		ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X -  - Buttons.CalcSize() * 2 - spacing);
 		
 		using (var _ = ImRaii.Disabled(!this._ctx.Actions.History.CanUndo))
 			if (Buttons.IconButtonTooltip(FontAwesomeIcon.StepBackward, this._ctx.Locale.Translate("actions.History_Undo")))

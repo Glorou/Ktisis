@@ -18,6 +18,7 @@ using Ktisis.Scene.Entities;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Editor.Selection;
 using Ktisis.Scene.Entities.World;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Interface.Components.Workspace;
 
@@ -45,6 +46,8 @@ public class SceneTree {
 		var frame = false;
 		try {
 			var id = ImGui.GetID("SceneTree_Frame");
+			//if (this._ctx.Config.Editor.UseToolbar)
+				//height += this.HeightCheck();
 			frame = ImGui.BeginChildFrame(id, new Vector2(-1, height));
 			if (!frame) return;
 			this.DrawScene(height);
@@ -53,6 +56,20 @@ public class SceneTree {
 		} finally {
 			if (frame) ImGui.EndChildFrame();
 		}
+	}
+
+	private float HeightCheck() {
+		float ret = 0f;
+		foreach (var node in this._nodes.Where((entity => entity.Type == EntityType.Actor))) {
+			var id = $"##SceneTree_{node.GetHashCode():X}";
+			var imKey = ImGui.GetID(id);
+			var expanded = ImGui.GetStateStorage().GetBool(imKey);
+			if (expanded) {
+				ret += node.Children.Count() * (ImGui.GetTextLineHeight() + 5);
+			}
+
+		}
+		return ret;
 	}
 	
 	// Draw scene entities

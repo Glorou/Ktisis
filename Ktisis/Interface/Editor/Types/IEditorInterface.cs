@@ -20,8 +20,10 @@ public interface IEditorInterface {
 
 	public void OpenCameraWindow();
 	public void OpenEnvironmentWindow();
+
 	public ObjectWindow GetObjectWindow();
 	public void OpenObjectEditor(bool forceOpen = false);
+	
 	public void OpenPosingWindow();
 
 	public void OpenSceneCreateMenu();

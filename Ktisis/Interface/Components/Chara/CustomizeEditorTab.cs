@@ -96,10 +96,11 @@ public class CustomizeEditorTab {
 	private void DrawSideFrame(MakeTypeRace data) {
 		var size = ImGui.GetContentRegionAvail();
 		
-		size.X = MathF.Max(size.X * SideRatio, 240.0f);
-
 		if (this._context.Config.Editor.UseToolbar)
-			size.Y = 420;
+			size = new Vector2(MathF.Max(size.X * SideRatio, 240.0f),420);
+		else
+			size.X = MathF.Max(size.X * SideRatio, 240.0f);
+		
 		
 		
 
@@ -207,7 +208,7 @@ public class CustomizeEditorTab {
 	// Main frame
 
 	private void DrawMainFrame(MakeTypeRace data) {
-		using var _frame = ImRaii.Child("##CustomizeMainFrame", ImGui.GetContentRegionAvail());
+		using var _frame = ImRaii.Child("##CustomizeMainFrame", (this._context.Config.Editor.UseToolbar? new Vector2(300, 420) :ImGui.GetContentRegionAvail()));
 		if (!_frame.Success) return;
 
 		ImGui.Spacing();

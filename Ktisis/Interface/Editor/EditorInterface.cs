@@ -144,7 +144,7 @@ public class EditorInterface : IEditorInterface {
 	}
 	public ObjectWindow GetObjectWindow() {
 		var gizmo = this._gizmo.Create(GizmoId.TransformEditor);
-		return this._gui.GetOrCreate<ObjectWindow>(this._ctx, new Gizmo2D(gizmo), this._gui);
+		return this._gui.GetOrCreate<ObjectWindow>(this._ctx, new Gizmo2D(this._ctx.Config.Gizmo, gizmo), this._gui);
 	}
 	
 	public void OpenObjectEditor(SceneEntity entity, bool forceOpen = false) {

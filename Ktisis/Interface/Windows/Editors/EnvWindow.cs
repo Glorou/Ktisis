@@ -172,7 +172,7 @@ public class EnvWindow : KtisisWindow {
 	// Advanced Editor
 
 	protected private unsafe void DrawAdvancedEditor(EnvManagerEx* env) {
-		using var _frame = ImRaii.Child("##AdvancedFrame", ImGui.GetContentRegionAvail());
+		using var _frame = ImRaii.Child("##AdvancedFrame", (this._scene.Context.Config.Editor.UseToolbar? new Vector2(300 ,ImGui.GetContentRegionAvail().Y): ImGui.GetContentRegionAvail()));
 		if (!_frame.Success) return;
 
 		if (!this._editors.TryGetValue(this.Current, out var editor))

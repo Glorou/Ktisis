@@ -42,7 +42,7 @@ public class ToolbarWindow : KtisisWindow {
 		this._ctx = ctx;
 		this._gui = gui;
 		this._workspace = new WorkspaceState(ctx);
-		this.Flags = this.Flags | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.AlwaysAutoResize;
+		this.Flags = this.Flags | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 		this._buttons =  new() {
 			new(this.DrawWorkspaceWindow, FontAwesomeIcon.PersonThroughWindow, "Workspace"),
 			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsAlt, "Object Editor"),
@@ -60,6 +60,7 @@ public class ToolbarWindow : KtisisWindow {
 	public override void PreDraw() {
 		base.PreDraw();
 		this.Size = Vector2.Zero;
+		
 		/*if(this._subWindow == null)
 			this.Flags |= ImGuiWindowFlags.AlwaysAutoResize;
 		else 
@@ -74,6 +75,7 @@ public class ToolbarWindow : KtisisWindow {
 	}
 
 	public override void Draw() {
+		ImGuiP.CalcWindowNextAutoFitSize(ImGuiP.GetCurrentWindow());
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
 		// WorkspaceState
 		this._workspace.Draw();
@@ -139,7 +141,7 @@ public class ToolbarWindow : KtisisWindow {
 			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
 		}
 
-
+		ImGui.SetNextWindowSize(-1*Vector2.One);
 
 		// handle window followup actions
 		if (this._subWindow is ActorWindow win) {

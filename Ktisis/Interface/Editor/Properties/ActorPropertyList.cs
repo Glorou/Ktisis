@@ -335,7 +335,7 @@ public class ActorPropertyList : ObjectPropertyList {
 
 			var btnSpace = Icons.CalcIconSize(FontAwesomeIcon.HandPointer).X
 				+ Icons.CalcIconSize(FontAwesomeIcon.EllipsisH).X
-				+ spacing * 3;
+				+ spacing * 5;
 
 			ImGui.SameLine(0, spacing);
 			ImGui.SameLine(0, ImGui.GetContentRegionAvail().X - btnSpace);

@@ -49,6 +49,7 @@ public class ObjectWindow : KtisisWindow {
 		this._gui = gui;
 		this._table = table;
 		this._propEditor = propEditor;
+		this.Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
 	}
 	
 	private ITransformMemento? Transform;
@@ -114,7 +115,7 @@ public class ObjectWindow : KtisisWindow {
 		
 		var gizmo = false;
 		if (!this._ctx.Config.Editor.TransformHide) {
-			gizmo = this.DrawGizmo(ref transform, ImGui.GetContentRegionAvail().X, disabled);
+			gizmo = this.DrawGizmo(ref transform, ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0), disabled);
 			isEnded = this._gizmo.IsEnded;
 		}
 
@@ -195,7 +196,7 @@ public class ObjectWindow : KtisisWindow {
 			ImGui.SameLine(0, spacing);
 		}
 
-		var avail = ImGui.GetContentRegionAvail().X;
+		var avail = ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0);
 		if (avail > iconSize)
 			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + avail - iconSize);
 

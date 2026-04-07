@@ -89,7 +89,7 @@ public class TransformTable {
 
 		
 		var useAvail = flags.HasFlag(TransformTableFlags.UseAvailable);
-		using var __ = ImRaii.ItemWidth(useAvail ? CalcTableAvail() : CalcTableWidth());
+		using var __ = ImRaii.ItemWidth(useAvail ? CalcTableAvail() - (this._cfg.File.Editor.UseToolbar? 0.1f : 0) : CalcTableWidth());
 
 		var op = flags.HasFlag(TransformTableFlags.Operation);
 		transOut = this.Transform.Set(transIn);
@@ -110,7 +110,7 @@ public class TransformTable {
 		this.IsDeactivated = false;
 		
 		var useAvail = flags.HasFlag(TransformTableFlags.UseAvailable);
-		using var __ = ImRaii.ItemWidth(useAvail ? ImGui.GetContentRegionAvail().X : CalcTableWidth());
+		using var __ = ImRaii.ItemWidth(useAvail ? ImGui.GetContentRegionAvail().X - (this._cfg.File.Editor.UseToolbar? 0.1f : 0): CalcTableWidth());
 
 		var operation = flags.HasFlag(TransformTableFlags.Operation);
 		this.DrawPosition(ref position, operation);
