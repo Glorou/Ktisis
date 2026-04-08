@@ -29,7 +29,7 @@ jobs:
           $json = $req.Content | ConvertFrom-Json
           $timestamp = $json.workflow_runs[0].head_commit.timestamp
           # need to figure out this env?
-          Write-Host "LAST_RUN_TIMESTAMP=$timestamp" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "LAST_RUN_TIMESTAMP=${timestamp}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Check Changes
         id: changecompare
         run: |
