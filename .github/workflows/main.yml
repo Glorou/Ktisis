@@ -28,7 +28,7 @@ jobs:
           $req = Invoke-WebRequest -Uri $url
           $json = $req.Content | ConvertFrom-Json
           $timestamp = $json.workflow_runs[0].head_commit.timestamp
-          $commitsSinceLast = git log --since="{$timestamp} --pretty=oneline
+          $commitsSinceLast = git log --since="{$timestamp}" --pretty=oneline
           if($commitsSinceLast -gt 0){
             Write-Host "Commits since last run, will build"
             $env:GITHUB_ENV += "should_run=true"
