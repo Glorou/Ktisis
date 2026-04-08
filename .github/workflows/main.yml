@@ -34,7 +34,7 @@ jobs:
             $env:GITHUB_ENV += "should_run=true"
           }else{
             Write-Host "No new commits since last run, stopping action"
-            $env:GITHUB_ENV += "should_run=false" 
+            $env:GITHUB_ENV += "should_run=true" 
           }
 
 
