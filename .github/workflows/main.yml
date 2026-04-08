@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  workflow_call:
+  
+
+env:
+  INTERNAL_NAME: Ktisis
+  CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.1.3
+      - name: Download Dalamud for SDK
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev\"
+      - name: Restore project
+        run: dotnet restore ${{env.INTERNAL_NAME}}
+      - name: Build Ktisis
+        run: dotnet build -c $${{env.INTERNAL_NAME}}
+      - name: Push artifcats
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            ${{env.INTERNAL_NAME}}\bin\Releases\${{env.INTERNAL_NAME}}
