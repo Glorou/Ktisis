@@ -31,10 +31,10 @@ jobs:
           $commitsSinceLast = git log --since="{$timestamp} --pretty=oneline
           if($commitsSinceLast -gt 0){
             Write-Host "Commits since last run, will build"
-            Write-Host "should_run=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            $env:GITHUB_ENV += "should_run=true"
           }else{
             Write-Host "No new commits since last run, stopping action"
-            Write-Host "should_run=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            $env:GITHUB_ENV += "should_run=false" 
           }
 
 
