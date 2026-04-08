@@ -78,6 +78,13 @@ public class ObjectWindow : KtisisWindow {
 		this.DrawTransform(target);
 		this.DrawProperties(target);
 	}
+
+	public void DrawCompact() {
+		var target = this._ctx.Transform.Target;
+		this.DrawToggles(target);
+
+		this.DrawTransform(target);
+	}
 	
 	// Property editor: Transform
 	

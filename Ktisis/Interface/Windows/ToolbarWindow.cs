@@ -112,7 +112,7 @@ public class ToolbarWindow : KtisisWindow {
 	internal void DrawWorkspaceWindow() => this.SetSubWindow<Workspace>();
 	internal void DrawObjectWindow() => this.SetSubWindow<ObjectWindow>();
 	internal void DrawActorWindow() => this.SetSubWindow<ActorWindow>();
-	internal void DrawPosingWindow() => this.SetSubWindow<PosingWindow>();
+	internal void DrawPosingWindow() => this.SetSubWindow<Pose>();
 	internal void DrawEnvWindow() => this.SetSubWindow<Env>();
 	internal void DrawCameraWindow() => this.SetSubWindow<CameraWindow>();
 	internal void DrawConfigWindow() => this.SetSubWindow<ConfigWindow>();
