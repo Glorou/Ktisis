@@ -50,7 +50,7 @@ public class AnimationManager : IAnimationManager {
 		}
 		
 		this.Timelines = this._data.GetExcelSheet<ActionTimeline>();
-		this.Module.PositionLockEnabled = this._ctx.Config.Editor.InitPosLock;
+
 	}
 	
 	// Controls
@@ -62,14 +62,7 @@ public class AnimationManager : IAnimationManager {
 				this.Module.SpeedControlEnabled = value;
 		}
 	}
-
-	public bool PositionLockEnabled {
-		get => this.Module?.PositionLockEnabled ?? false;
-		set {
-			if (this.Module != null)
-				this.Module.PositionLockEnabled = value;
-		}
-	}
+	
 	
 	// Editors
 

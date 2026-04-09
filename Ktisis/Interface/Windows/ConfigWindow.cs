@@ -203,8 +203,6 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
-		ImGui.Checkbox(this.Locale.Translate("config.workspace.initPosLock"), ref this.Config.Editor.InitPosLock);
-		this.DrawHint("config.workspace.hintPosLock");
 		ImGui.Text("Default location to open file browser:");
 		ImGui.Text(this.Config.File.DefaultLocation == string.Empty ? "None" : this.Config.File.DefaultLocation);
 		ImGui.SameLine();

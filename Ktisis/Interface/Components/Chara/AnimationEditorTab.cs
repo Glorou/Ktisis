@@ -199,10 +199,7 @@ public class AnimationEditorTab {
 		var isWeaponDrawn = this.Editor.IsWeaponDrawn;
 		if (ImGui.Checkbox(this._locale.Translate("chara_edit.animation.controls.weapon"), ref isWeaponDrawn))
 			this.Editor.ToggleWeapon();
-
-		var posLock = this.Editor.PositionLockEnabled;
-		if (ImGui.Checkbox(this._locale.Translate("chara_edit.animation.controls.posLock"), ref posLock))
-			this.Editor.PositionLockEnabled = posLock;
+		
 	}
 
 	private void DrawPoseExpression() {
