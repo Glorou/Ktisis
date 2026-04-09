@@ -157,7 +157,7 @@ public class SceneTree {
 				state.SetBool(imKey, isExpand = !isExpand);
 
 			if (isHover && this.IsNodeHovered(pos, size, rightAdjust)) {
-				if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)) {
+				if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && !this._ctx.Config.Editor.UseToolbar) {
 					this._ctx.Interface.OpenEditorFor(node);
 				} else if (ImGui.IsMouseClicked(ImGuiMouseButton.Left)) {
 					// if we shift-click, handle the multi-select for this node later after tree rendering
@@ -168,6 +168,10 @@ public class SceneTree {
 					}
 				} else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right)) {
 					this._ctx.Interface.OpenSceneEntityMenu(node);
+				}
+
+				if (this._ctx.Config.Editor.UseToolbar && ImGui.IsMouseClicked(ImGuiMouseButton.Middle)) {
+					this._ctx.Interface.OpenEditorFor(node);
 				}
 
 				if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !shiftClicked)

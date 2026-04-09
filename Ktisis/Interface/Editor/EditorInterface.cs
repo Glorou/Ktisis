@@ -63,9 +63,9 @@ public class EditorInterface : IEditorInterface {
 	}
 
 	private void OnSelectChanged(ISelectManager sender) {
-		if (!this._ctx.Config.Editor.ToggleEditorOnSelect) return;
+		if (!this._ctx.Config.Editor.ToggleEditorOnSelect ) return;
 
-		var open = sender.Count > 0;
+		var open =  sender.Count > 0;
 		
 		var editor = this._gui.Get<ObjectWindow>();
 		if (editor == null) {
