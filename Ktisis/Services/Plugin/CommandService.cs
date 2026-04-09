@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Command;
+using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin.Services;
 using HandlerDelegate = Dalamud.Game.Command.IReadOnlyCommandInfo.HandlerDelegate;
 
@@ -80,10 +82,16 @@ public class CommandService : IDisposable {
 			Ktisis.Log.Info("Dumping log to clipboard");
 			string clipboard = string.Empty;
 			var events = Ktisis.Log.Logs.ToArray();
-			foreach (var eventString in events) {
+			foreach (var eventString in events.Where((e) => !e.Split('|').StartsWith(" Verbose"))) {
 				clipboard += eventString;
 			}
 			ImGui.SetClipboardText(clipboard);
+			var notif = new Notification() {
+				Content = "Debug info copied to clipboard",
+				Title = "[Info] Ktisis",
+				Type = NotificationType.Info
+			};
+			Ktisis.Notification.AddNotification(notif);
 			return;
 		}
 

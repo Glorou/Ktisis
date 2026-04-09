@@ -347,8 +347,8 @@
 				"selectFolder": "Select Folder"
 			},
 			"defaultLocation": {
-				"set": "Set",
-				"reset": "Reset"
+				"remove": "Unset this folder as default",
+				"add": "Set this folder as default place to open when using the file browser"
 			}
 		},
 		"input": {

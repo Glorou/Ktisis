@@ -5,6 +5,7 @@ using System.IO;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Colors;
 
 using GLib.Widgets;
 
@@ -203,25 +204,7 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
-		ImGui.Text("Default location to open file browser:");
-		ImGui.Text(this.Config.File.DefaultLocation == string.Empty ? "None" : this.Config.File.DefaultLocation);
-		ImGui.SameLine();
-		if (this.Config.File.DefaultLocation == string.Empty) {
-			if (ImGui.SmallButton(this.Locale.Translate("config.workspace.defaultLocation.set"))) {
-				this._gui.FileDialogs.OpenFolder(this.Locale.Translate("config.workspace.defaultLocation.selectFolder"), p => {
-					this.Config.File.DefaultLocation = p;
-					this._cfg.Save();
-				});
-			}
-		} else {
-				if (ImGui.SmallButton(this.Locale.Translate("config.workspace.defaultLocation.reset"))) {
-					this.Config.File.DefaultLocation = string.Empty;
-					this._cfg.Save();
-				}
-		}
 		ImGui.Spacing();
-	
-
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.toggleOpenWindows"), ref this.Config.Editor.ToggleOpenWindows);
@@ -469,12 +452,13 @@ public class ConfigWindow : KtisisWindow {
 				ImGui.TableSetupColumn("##Move", ImGuiTableColumnFlags.WidthFixed, moveWidth);
 				ImGui.TableSetupColumn(this.Locale.Translate("config.workspace.customLocations.columnName"), ImGuiTableColumnFlags.WidthStretch, 0.3f);
 				ImGui.TableSetupColumn(this.Locale.Translate("config.workspace.customLocations.columnPath"), ImGuiTableColumnFlags.WidthStretch, 0.7f);
-				ImGui.TableSetupColumn("##Remove", ImGuiTableColumnFlags.WidthFixed, buttonSize + ImGui.GetStyle().CellPadding.X * 2);
+				ImGui.TableSetupColumn("##Remove", ImGuiTableColumnFlags.WidthFixed, (buttonSize * 2) + ImGui.GetStyle().CellPadding.X * 2);
 				ImGui.TableHeadersRow();
 
 				for (var i = 0; i < locations.Count; i++) {
 					using var _id = ImRaii.PushId(i);
 					var (path, name) = locations[i];
+					var isDefault = locations[i].Path.Equals(this.Config.File.DefaultLocation);
 					ImGui.TableNextRow();
 
 					ImGui.TableNextColumn();
@@ -517,7 +501,21 @@ public class ConfigWindow : KtisisWindow {
 					}
 
 					ImGui.TableNextColumn();
+
+					if (isDefault) {
+						if (Buttons.IconButtonTooltip(FontAwesomeIcon.Star, this.Locale.Translate("config.workspace.defaultLocation.remove"), iconColor:ImGuiColors.ParsedGold)) {
+							this.Config.File.DefaultLocation = string.Empty;
+						}
+					} else {
+						if (Buttons.IconButtonTooltip(FontAwesomeIcon.Star, this.Locale.Translate("config.workspace.defaultLocation.add"))) {
+							this.Config.File.DefaultLocation = locations[i].Path;
+						}
+					}
+
+					ImGui.SameLine();
 					if (Buttons.IconButtonTooltip(FontAwesomeIcon.Trash, this.Locale.Translate("config.workspace.customLocations.remove"))) {
+						if (isDefault)
+							this.Config.File.DefaultLocation = string.Empty;
 						locations.RemoveAt(i);
 						this._cfg.Save();
 						i--;

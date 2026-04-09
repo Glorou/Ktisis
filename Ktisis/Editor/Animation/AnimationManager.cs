@@ -63,7 +63,6 @@ public class AnimationManager : IAnimationManager {
 		}
 	}
 	
-	
 	// Editors
 
 	public IAnimationEditor GetAnimationEditor(ActorEntity actor) => new AnimationEditor(this, _ctx, actor);
