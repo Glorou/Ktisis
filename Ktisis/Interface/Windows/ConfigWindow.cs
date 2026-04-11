@@ -204,6 +204,8 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
+		ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
+		this.DrawHint("config.workspace.hint_AutoResizeObj");
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {

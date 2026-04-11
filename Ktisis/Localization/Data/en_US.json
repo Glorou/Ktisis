@@ -328,6 +328,8 @@
 			"legacyLightEditor": "Prefer legacy light editor",
 			"legacyLightHint": "Allows opening the Light Editor window, now moved to the Object Editor",
 			"confirmExit": "Ensure shift has to be held to exit posing mode",
+			"AutoResizeObjectEditor": "Automatically expand the Object Editor when opening new dropdowns",
+			"hint_AutoResizeObj": "This disables the ability to resize the editors height, but you can still change its width",
 			"workcam": {
 				"speed": "Work camera speed",
 				"fastMulti": "Work camera fast-multiplier",

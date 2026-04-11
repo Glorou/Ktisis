@@ -46,6 +46,11 @@ public class EditorConfig {
 	public bool PlayEmoteStart = true;
 	public bool ForceLoop = true;
 
+	
+	// Object Editor
+
+	public bool AutoResizeObjectEditor = false;
+	
 	// Helpers
 
 	public EntityDisplay GetDisplayForType(EntityType type)

@@ -49,6 +49,7 @@ public class ObjectWindow : KtisisWindow {
 		this._gui = gui;
 		this._table = table;
 		this._propEditor = propEditor;
+
 	}
 	
 	private ITransformMemento? Transform;
@@ -64,6 +65,7 @@ public class ObjectWindow : KtisisWindow {
 	}
 
 	public override void PreDraw() {
+		this.Flags = this._ctx.Config.Editor.AutoResizeObjectEditor ? ImGuiWindowFlags.NoScrollbar : ImGuiWindowFlags.None;
 		var width = TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2;
 		this.SizeConstraints = new WindowSizeConstraints {
 			MinimumSize = new Vector2(width, 0)
@@ -76,6 +78,8 @@ public class ObjectWindow : KtisisWindow {
 
 		this.DrawTransform(target);
 		this.DrawProperties(target);
+		if(this._ctx.Config.Editor.AutoResizeObjectEditor)
+			this.Autoresize();					//Need to add toolbar here too
 	}
 	
 	// Property editor: Transform
@@ -246,4 +250,14 @@ public class ObjectWindow : KtisisWindow {
 
 		return result;
 	}
+	
+	//Autoresize
+
+	private void Autoresize() {
+		var window = ImGuiP.GetCurrentWindow();
+		var sizeDiff = window.ContentSizeIdeal.Y  - window.ContentRegionRect.GetHeight();
+		if(sizeDiff != 0)
+			ImGui.SetWindowSize(new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().Y + sizeDiff ));
+	}
+	
 }
