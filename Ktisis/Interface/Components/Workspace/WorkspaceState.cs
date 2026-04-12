@@ -80,12 +80,7 @@ public class WorkspaceState {
 		
 			if (shouldBlock)
 				ImGui.EndDisabled();
-
-			ImGui.SameLine();
 			
-			var labelHeight = (UiBuilder.DefaultFontSizePx * 2 + style.ItemInnerSpacing.Y) * ImGuiHelpers.GlobalScale;
-			ImGui.SetCursorPosY(cursorY + (avail - labelHeight) / 2);
-			this.DrawOverlayToggle();
 		} finally {
 			if (frame) ImGui.EndChildFrame();
 		}
