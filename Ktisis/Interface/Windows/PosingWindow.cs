@@ -143,7 +143,7 @@ public class PosingWindow : KtisisWindow {
 	private void DrawWindow(ActorEntity target) {
 		var avail = ImGui.GetContentRegionAvail();
 		if (this._ctx.Config.Editor.UseToolbar)
-			avail = new Vector2(avail.X - 0.1f, 300);
+			avail = new Vector2(avail.X * .75f, 300);
 
 		var width = avail.X * 0.90f;
 		var spacing = ImGui.GetStyle().ItemSpacing.X * 2;

@@ -38,6 +38,7 @@ public class Pose : PosingWindow{
 		this._subWindow = this._ctx.Interface.GetObjectWindow();
 		this._subWindow.OnOpen();
 		base.Draw();
+		ImGui.SameLine();
 		using var _ = ImRaii.Group();
 		this._subWindow.DrawCompact();
 	}
