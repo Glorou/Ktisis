@@ -49,7 +49,6 @@ public class ObjectWindow : KtisisWindow {
 		this._gui = gui;
 		this._table = table;
 		this._propEditor = propEditor;
-		this.Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
 	}
 	
 	private ITransformMemento? Transform;
@@ -69,6 +68,8 @@ public class ObjectWindow : KtisisWindow {
 		this.SizeConstraints = new WindowSizeConstraints {
 			MinimumSize = new Vector2(width, 0)
 		};
+		if(this._ctx.Config.Editor.UseToolbar)
+			this.Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
 	}
 
 	public override void Draw() {
@@ -200,6 +201,9 @@ public class ObjectWindow : KtisisWindow {
 			if (Buttons.IconButtonTooltip(FontAwesomeIcon.PeopleArrows, siblingHint, iconBtnSize))
 				this._ctx.Selection.Select(siblingNode, SelectMode.Multiple); // if a sibling exists, select it assuming SelectMode.Multiple
 
+			ImGui.SameLine(0, spacing);
+		} else {
+			ImGui.Dummy(iconBtnSize);
 			ImGui.SameLine(0, spacing);
 		}
 

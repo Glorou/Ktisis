@@ -28,7 +28,7 @@ public class PosingWindow : KtisisWindow {
 	private PoseViewSchema? _schema;
 	private ViewEnum _view = ViewEnum.Body;
 
-	private ActorEntity? _target;
+	internal ActorEntity? _target;
 
 	private enum ViewEnum {
 		Body,
@@ -60,13 +60,14 @@ public class PosingWindow : KtisisWindow {
 	}
 
 	public override void PreDraw() {
-		this.SizeConstraints = new WindowSizeConstraints {
-			MinimumSize = new Vector2(500, 350)
-		};
+		if(!this._ctx.Config.Editor.UseToolbar)
+			this.SizeConstraints = new WindowSizeConstraints {
+				MinimumSize = new Vector2(500, 350)
+			};
 	}
 
 	public override void Draw() {
-		if (this._ctx.Config.Editor.UseLegacyPoseViewTabs) {
+		if (this._ctx.Config.Editor.UseLegacyPoseViewTabs && !this._ctx.Config.Editor.UseToolbar) {
 			this.DrawLegacyTabs();
 			return;
 		}
@@ -140,10 +141,10 @@ public class PosingWindow : KtisisWindow {
 		this.DrawWindow(this._target);
 	}
 
-	private void DrawWindow(ActorEntity target) {
+	private unsafe void DrawWindow(ActorEntity target) {
 		var avail = ImGui.GetContentRegionAvail();
 		if (this._ctx.Config.Editor.UseToolbar)
-			avail = new Vector2(avail.X * .75f, 300);
+			avail = new Vector2(avail.X * .70f, 275);
 
 		var width = avail.X * 0.90f;
 		var spacing = ImGui.GetStyle().ItemSpacing.X * 2;
@@ -151,7 +152,8 @@ public class PosingWindow : KtisisWindow {
 		var viewRegion = avail with { X = width - spacing };
 		this.DrawView(target, viewRegion);
 		ImGui.SameLine();
-		ImGui.SetCursorPosX(width);
+		if (!this._ctx.Config.Editor.UseToolbar)
+			ImGui.SetCursorPosX(width);
 		this.DrawSideMenu(target);
 	}
 	

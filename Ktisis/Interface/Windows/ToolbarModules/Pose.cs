@@ -1,4 +1,6 @@
-﻿using Dalamud.Bindings.ImGui;
+﻿using System.Numerics;
+
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 
@@ -32,14 +34,23 @@ public class Pose : PosingWindow{
 		gpose) {
 		this._ctx = ctx;
 	}
-
+	public override void PreDraw() {
+		this.Size = Vector2.Zero;
+		base.PreDraw();
+	}
 	public override void Draw() {
 
-		this._subWindow = this._ctx.Interface.GetObjectWindow();
-		this._subWindow.OnOpen();
-		base.Draw();
-		ImGui.SameLine();
-		using var _ = ImRaii.Group();
-		this._subWindow.DrawCompact();
+		using (var _child = ImRaii.Group()) {
+			this._subWindow = this._ctx.Interface.GetObjectWindow();
+			this._subWindow.OnOpen();
+			base.Draw();
+		}
+
+		if (this._target is { IsValid: true }) {
+			ImGui.SameLine();
+			using var _ = ImRaii.Group();
+			this._subWindow.DrawCompact();
+		}
 	}
+
 }
