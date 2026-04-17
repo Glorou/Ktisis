@@ -132,6 +132,12 @@ public class GuiManager : IDisposable {
 	
 	// Disposal
 
+	internal void RemoveAllExceptPopups() {
+		foreach (var window in this._windows.ToList().Where((window => (window.GetType().BaseType != typeof(KtisisPopup)))))
+			this.Remove(window);
+		this._windows.Clear();
+	}
+	
 	private void RemoveAll() {
 		foreach (var window in this._windows.ToList())
 			this.Remove(window);

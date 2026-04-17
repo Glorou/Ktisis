@@ -13,6 +13,7 @@ using Ktisis.Data.Config;
 using Ktisis.Editor.Context;
 using Ktisis.Interface.Components.Config;
 using Ktisis.Interface.Types;
+using Ktisis.Interface.Windows.ToolbarModules;
 using Ktisis.Services.Data;
 using Ktisis.Localization;
 
@@ -205,9 +206,11 @@ public class ConfigWindow : KtisisWindow {
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.initPosLock"), ref this.Config.Editor.InitPosLock);
-		//this.DrawHint("config.workspace.hintPosLock");
-		ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar);
-		this.DrawHint("config.workspace.hintToolbar");
+
+		if (ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar)) {
+			var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
+			popup.Open();
+		}
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
