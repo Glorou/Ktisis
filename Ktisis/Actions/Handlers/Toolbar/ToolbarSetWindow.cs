@@ -1,8 +1,4 @@
-﻿
-	
-
-
-using Dalamud.Bindings.ImGuizmo;
+﻿using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Game.ClientState.Keys;
 
 using FFXIVClientStructs;
