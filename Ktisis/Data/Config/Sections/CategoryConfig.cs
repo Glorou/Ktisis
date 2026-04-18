@@ -15,6 +15,7 @@ public class CategoryConfig {
 	public bool ShowNsfwBones = true;
 	public bool ShowAllVieraEars = false;
 	public bool ShowFriendlyBoneNames = true;
+	public bool HidePhysicsBones = false;
     
 	// Default category
 	

@@ -101,6 +101,8 @@ public sealed class PoseBuilder : EntityBuilder<EntityPose, IPoseBuilder>, IPose
 				
 				if (category.IsNsfw && !this.Config.Categories.ShowNsfwBones)
 					continue;
+				
+				if(this.Config.Categories.HidePhysicsBones)
 
 				if (this.CategoryMap.TryGetValue(category, out var boneList))
 					boneList.Add(bone);
