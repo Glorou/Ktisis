@@ -203,7 +203,6 @@ public class ConfigWindow : KtisisWindow {
 		this.DrawHint("config.workspace.hintIncognito");
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
-		refresh |= ImGui.Checkbox(this.Locale.Translate("config.categories.hide_phys"), ref this.Config.Categories.HidePhysicsBones);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
 		this.DrawHint("config.workspace.hint_AutoResizeObj");
