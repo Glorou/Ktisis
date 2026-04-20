@@ -12,7 +12,6 @@ public class EditorConfig {
 	public bool OpenOnEnterGPose = true;
 	public bool ToggleOpenWindows = true;
 	public bool ConfirmExit = false;
-	public bool InitPosLock = false;
 
 	public bool ToggleEditorOnSelect = true;
 	public bool CloseEditorOnDeselect = false;
@@ -47,6 +46,11 @@ public class EditorConfig {
 	public bool PlayEmoteStart = true;
 	public bool ForceLoop = true;
 
+	
+	// Object Editor
+
+	public bool AutoResizeObjectEditor = false;
+	
 	// Helpers
 
 	public EntityDisplay GetDisplayForType(EntityType type)
