@@ -75,7 +75,6 @@ public class ObjectWindow : KtisisWindow {
 		this.SizeConstraints = new WindowSizeConstraints {
 			MinimumSize = new Vector2(width, 0)
 		};
-
 	}
 
 	public override void Draw() {
@@ -84,6 +83,8 @@ public class ObjectWindow : KtisisWindow {
 
 		this.DrawTransform(target);
 		this.DrawProperties(target);
+		if(this._ctx.Config.Editor.AutoResizeObjectEditor)
+			this.Autoresize();					//Need to add toolbar here too
 	}
 
 	public void DrawCompact() {
@@ -266,4 +267,14 @@ public class ObjectWindow : KtisisWindow {
 
 		return result;
 	}
+	
+	//Autoresize
+
+	private void Autoresize() {
+		var window = ImGuiP.GetCurrentWindow();
+		var sizeDiff = window.ContentSizeIdeal.Y  - window.ContentRegionRect.GetHeight();
+		if(sizeDiff != 0)
+			ImGui.SetWindowSize(new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().Y + sizeDiff ));
+	}
+	
 }

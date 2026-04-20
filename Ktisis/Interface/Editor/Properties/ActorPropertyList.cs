@@ -78,12 +78,7 @@ public class ActorPropertyList : ObjectPropertyList {
 
 	private void DrawActorTab(ActorEntity actor) {
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
-
-		// Position lock
-
-		var posLock = this._ctx.Animation.PositionLockEnabled;
-		if (ImGui.Checkbox(this._locale.Translate("actors.pos_lock"), ref posLock))
-			this._ctx.Animation.PositionLockEnabled = posLock;
+		
 
 		ImGui.Spacing();
 
