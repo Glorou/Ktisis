@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Reflection;
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
-using FFXIVClientStructs;
 
 using GLib.Widgets;
 
@@ -53,19 +51,11 @@ public class ToolbarWindow : KtisisWindow {
 			//new(this.DrawConfigWindow, FontAwesomeIcon.G, "Scene Editor"),
 			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings"),
 		};
-		//this.SizeConstraints = new WindowSizeConstraints(){MaximumSize = new Vector2(-1, float.MaxValue),  MinimumSize = new Vector2(-1, 0)};
-		
 	}
 
 	public override void PreDraw() {
 		base.PreDraw();
 		this.Size = Vector2.Zero;
-		
-		/*if(this._subWindow == null)
-			this.Flags |= ImGuiWindowFlags.AlwaysAutoResize;
-		else 
-			this.Flags &= ~ImGuiWindowFlags.AlwaysAutoResize;*/
-		
 	}
 
 	public override void PreOpenCheck() {
@@ -77,6 +67,7 @@ public class ToolbarWindow : KtisisWindow {
 	public override void Draw() {
 		ImGuiP.CalcWindowNextAutoFitSize(ImGuiP.GetCurrentWindow());
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
+		
 		// WorkspaceState
 		this._workspace.Draw();
 		ImGui.Spacing();
@@ -93,11 +84,6 @@ public class ToolbarWindow : KtisisWindow {
 			if(button != this._buttons.Last())
 				ImGui.SameLine(0, spacing * 2);
 		}
-		
-		//Close editor if nothing selected	
-		//if (this._subWindow?.GetType() == typeof(ObjectWindow) && this._ctx.Selection.GetSelected().Count() == 0 && this._ctx.Config.Editor.CloseEditorOnDeselect)
-			//this._subWindow = null;
-
 		// Subwindow
 		if (this._subWindow != null) {
 			ImGui.Spacing();
@@ -140,8 +126,6 @@ public class ToolbarWindow : KtisisWindow {
 		}else {
 			this._subWindow = this._gui.GetOrCreate<T>(this._ctx);
 		}
-
-		ImGui.SetNextWindowSize(-1*Vector2.One);
 
 		// handle window followup actions
 		if (this._subWindow is ActorWindow win) {

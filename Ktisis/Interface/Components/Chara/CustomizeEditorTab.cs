@@ -55,7 +55,6 @@ public class CustomizeEditorTab {
 
 	private bool _isSetup;
 	
-	
 	public void Setup(IEditorContext ctx) {
 		if (this._isSetup) return;
 		this._context = ctx;
@@ -69,6 +68,8 @@ public class CustomizeEditorTab {
 	// Draw
 	
 	public void Draw() {
+		if (this._context is not { IsValid: true })
+			return;
 		this.ButtonSize = CalcButtonSize();
 		
 		var tribe = (Tribe)this.Editor.GetCustomization(CustomizeIndex.Tribe);
@@ -84,6 +85,8 @@ public class CustomizeEditorTab {
 	}
 
 	private void Draw(MakeTypeRace data) {
+		if (this._context is not { IsValid: true })
+			return;
 		this.DrawSideFrame(data);
 		ImGui.SameLine();
 		this.DrawMainFrame(data);
@@ -100,9 +103,6 @@ public class CustomizeEditorTab {
 			size = new Vector2(MathF.Max(size.X * SideRatio, 240.0f),420);
 		else
 			size.X = MathF.Max(size.X * SideRatio, 240.0f);
-		
-		
-		
 
 		using var _frame = ImRaii.Child("##CustomizeSideFrame", size, true);
 

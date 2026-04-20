@@ -57,21 +57,6 @@ public class SceneTree {
 			if (frame) ImGui.EndChildFrame();
 		}
 	}
-
-	private float HeightCheck() {
-		float ret = 0f;
-		foreach (var node in this._nodes.Where((entity => entity.Type == EntityType.Actor))) {
-			var id = $"##SceneTree_{node.GetHashCode():X}";
-			var imKey = ImGui.GetID(id);
-			var expanded = ImGui.GetStateStorage().GetBool(imKey);
-			if (expanded) {
-				ret += node.Children.Count() * (ImGui.GetTextLineHeight() + 5);
-			}
-
-		}
-		return ret;
-	}
-	
 	// Draw scene entities
 
 	private static float IconSpacing => UiBuilder.DefaultFontSizePx * ImGuiHelpers.GlobalScale;
