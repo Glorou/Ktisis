@@ -5,6 +5,7 @@ using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Style;
 using Dalamud.Interface.Utility.Raii;
 
 
@@ -22,7 +23,7 @@ using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Modules;
 
 namespace Ktisis.Interface.Windows;
-internal record WindowButtons(DrawContentDelegate Window, FontAwesomeIcon Icon, string TooltipText);
+internal record WindowButtons(DrawContentDelegate Window, FontAwesomeIcon Icon, string TooltipText, Type WindowType);
 internal delegate void DrawContentDelegate();
 
 public class ToolbarWindow : KtisisWindow {
@@ -42,14 +43,14 @@ public class ToolbarWindow : KtisisWindow {
 		this._workspace = new WorkspaceState(ctx);
 		this.Flags = this.Flags | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 		this._buttons =  new() {
-			new(this.DrawWorkspaceWindow, FontAwesomeIcon.PersonThroughWindow, "Workspace"),
-			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsAlt, "Object Editor"),
-			new(this.DrawActorWindow, FontAwesomeIcon.Walking, "Actor Editor"),
-			new(this.DrawPosingWindow, FontAwesomeIcon.Portrait, "Pose View"),
-			new(this.DrawEnvWindow, FontAwesomeIcon.CloudSun, "Environment Editor"),
-			new(this.DrawCameraWindow, FontAwesomeIcon.CameraRetro, "Camera Editor"),
+			new(this.DrawWorkspaceWindow, FontAwesomeIcon.PersonThroughWindow, "Workspace", typeof(Workspace)),
+			new(this.DrawObjectWindow, FontAwesomeIcon.ArrowsAlt, "Object Editor", typeof(ObjectWindow)),
+			new(this.DrawActorWindow, FontAwesomeIcon.Walking, "Actor Editor", typeof(ActorWindow)),
+			new(this.DrawPosingWindow, FontAwesomeIcon.Portrait, "Pose View", typeof(Pose)),
+			new(this.DrawEnvWindow, FontAwesomeIcon.CloudSun, "Environment Editor", typeof(Env)),
+			new(this.DrawCameraWindow, FontAwesomeIcon.CameraRetro, "Camera Editor", typeof(CameraWindow)),
 			//new(this.DrawConfigWindow, FontAwesomeIcon.G, "Scene Editor"),
-			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings"),
+			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings", typeof(ConfigWindow)),
 		};
 	}
 
@@ -79,6 +80,12 @@ public class ToolbarWindow : KtisisWindow {
 		
 		// Subwindow Buttons
 		foreach (var button in _buttons) {
+			Vector4 color;
+			var bgCol = this._subWindow?.GetType() == button.WindowType ? ImGuiCol.ButtonActive : ImGuiCol.Button;
+			unsafe {
+				color =  *ImGui.GetStyleColorVec4(bgCol);
+			}
+			using var _ = ImRaii.PushColor(ImGuiCol.Button, color);
 			if (Buttons.IconButtonTooltip(button.Icon, button.TooltipText, new Vector2(48, 48)))
 				button.Window();
 			if(button != this._buttons.Last())

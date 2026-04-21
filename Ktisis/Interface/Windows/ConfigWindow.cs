@@ -198,7 +198,12 @@ public class ConfigWindow : KtisisWindow {
 	private void DrawWorkspaceTab() {
 		ImGui.Text(this.Locale.Translate("config.workspace.header"));
 		ImGui.Spacing();
-
+		
+		if (ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar)) {
+			var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
+			popup.Open();
+		}
+		this.DrawHint("config.workspace.hintToolbar");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.init"), ref this.Config.Editor.OpenOnEnterGPose);
 		this.DrawHint("config.workspace.hintInit");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.incognitoPlayerNames"), ref this.Config.Editor.IncognitoPlayerNames);
@@ -206,18 +211,15 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
-		ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
-		this.DrawHint("config.workspace.hint_AutoResizeObj");
-		if (ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar)) {
-			var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
-			popup.Open();
-		}
+
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.toggleOpenWindows"), ref this.Config.Editor.ToggleOpenWindows);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyPoseTabs"), ref this.Config.Editor.UseLegacyPoseViewTabs);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.editOnSelect"), ref this.Config.Editor.ToggleEditorOnSelect);
+			ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
+			this.DrawHint("config.workspace.hint_AutoResizeObj");
 			using (ImRaii.Disabled(!this.Config.Editor.ToggleEditorOnSelect))
 				ImGui.Checkbox(this.Locale.Translate("config.workspace.closeOnDeselect"), ref this.Config.Editor.CloseEditorOnDeselect);
 		}

@@ -16,6 +16,7 @@ public class ChangeStatePopup: KtisisPopup {
 	) : base("##ToolbarConfirmPopup", flags) {
 		this._ctx = ctx;
 		this._state = this._ctx.Config.Editor.UseToolbar;
+		this._ctx.Config.Editor.UseToolbar = !this._state;
 	}
 
 	protected override void OnDraw() {
@@ -29,14 +30,14 @@ public class ChangeStatePopup: KtisisPopup {
 			ImGui.SetCursorPosX((width-buttons)/2);
 			
 			if (ImGui.Button("Continue")) {
-				this._ctx.Plugin.Gui.RemoveAllExceptPopups();
+				this._ctx.Plugin.Gui.ResetWorkspace();
+				this._ctx.Config.Editor.UseToolbar = this._state;
 				this._ctx.Interface.ToggleWorkspaceWindow();
 				this.Close();
 			}
 
 			ImGui.SameLine();
 			if (ImGui.Button("Cancel")) {
-				this._ctx.Config.Editor.UseToolbar = !this._state;
 				this.Close();
 			}
 	}
