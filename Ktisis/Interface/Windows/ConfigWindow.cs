@@ -200,8 +200,10 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Spacing();
 		
 		if (ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar)) {
-			var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
-			popup.Open();
+			if (this._context.Current is { IsValid: true, IsGPosing: true }) {
+				var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
+				popup.Open();
+			}
 		}
 		this.DrawHint("config.workspace.hintToolbar");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.init"), ref this.Config.Editor.OpenOnEnterGPose);
