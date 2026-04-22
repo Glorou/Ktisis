@@ -13,7 +13,6 @@ using Ktisis.Core.Attributes;
 using Ktisis.Interface.Overlay;
 using Ktisis.Interface.Types;
 using Ktisis.Interface.Windows;
-using Ktisis.Interface.Windows.Editors;
 using Ktisis.Localization;
 
 namespace Ktisis.Interface; 
@@ -30,17 +29,6 @@ public class GuiManager : IDisposable {
 
 	public readonly LocaleManager Locale;
 	public readonly FileDialogManager FileDialogs;
-
-	private List<Type> _resetList = new List<Type>() {
-		typeof(WorkspaceWindow),
-		typeof(EnvWindow),
-		typeof(ObjectWindow),
-		typeof(CameraWindow),
-		typeof(PosingWindow),
-		typeof(ConfigWindow),
-		typeof(ToolbarWindow),
-		typeof(ActorWindow)
-	};
 	
 	public GuiManager(
 		DIBuilder di,
@@ -144,10 +132,10 @@ public class GuiManager : IDisposable {
 	}
 	
 	// Disposal
-
 	internal void ResetWorkspace() {
-		foreach (var window in this._windows.ToList().Where((window => (this._resetList.Contains(window.GetType())))))
+		foreach (var window in this._windows.ToList().Where((window => (window.GetType().BaseType != typeof(KtisisPopup)))))
 			this.Remove(window);
+		this._windows.Clear();
 	}
 	
 	private void RemoveAll() {

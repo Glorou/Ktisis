@@ -32,7 +32,7 @@ public class ChangeStatePopup: KtisisPopup {
 			if (ImGui.Button("Continue")) {
 				this._ctx.Plugin.Gui.ResetWorkspace();
 				this._ctx.Config.Editor.UseToolbar = this._state;
-				this._ctx.Interface.ToggleWorkspaceWindow();
+				this._ctx.Interface.Prepare();
 				this.Close();
 			}
 
