@@ -17,6 +17,7 @@ public class ChangeStatePopup: KtisisPopup {
 		this._ctx = ctx;
 		this._state = this._ctx.Config.Editor.UseToolbar;
 		this._ctx.Config.Editor.UseToolbar = !this._state;
+		ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter());
 	}
 
 	protected override void OnDraw() {
