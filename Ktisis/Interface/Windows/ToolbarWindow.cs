@@ -150,4 +150,10 @@ public class ToolbarWindow : KtisisWindow {
 		}
 		this._subWindow.OnOpen();
 	}
+
+	public override void OnSafeToRemove() {
+		this._subWindow?.Close();
+		this._subWindow?.OnSafeToRemove();
+		base.OnSafeToRemove();
+	}
 }
