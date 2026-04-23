@@ -49,7 +49,6 @@ public class ObjectWindow : KtisisWindow {
 		this._gui = gui;
 		this._table = table;
 		this._propEditor = propEditor;
-
 	}
 	
 	private ITransformMemento? Transform;
@@ -65,7 +64,13 @@ public class ObjectWindow : KtisisWindow {
 	}
 
 	public override void PreDraw() {
-		this.Flags = this._ctx.Config.Editor.AutoResizeObjectEditor ? ImGuiWindowFlags.NoScrollbar : ImGuiWindowFlags.None;
+		if(this._ctx.Config.Editor.UseToolbar)
+			this.Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
+		else if (this._ctx.Config.Editor.AutoResizeObjectEditor)
+			this.Flags = ImGuiWindowFlags.NoScrollbar;
+		else
+			this.Flags = ImGuiWindowFlags.None;
+		
 		var width = TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2;
 		this.SizeConstraints = new WindowSizeConstraints {
 			MinimumSize = new Vector2(width, 0)
@@ -80,6 +85,13 @@ public class ObjectWindow : KtisisWindow {
 		this.DrawProperties(target);
 		if(this._ctx.Config.Editor.AutoResizeObjectEditor)
 			this.Autoresize();					//Need to add toolbar here too
+	}
+
+	public void DrawCompact() {
+		var target = this._ctx.Transform.Target;
+		this.DrawToggles(target);
+
+		this.DrawTransform(target);
 	}
 	
 	// Property editor: Transform
@@ -118,14 +130,14 @@ public class ObjectWindow : KtisisWindow {
 		
 		var gizmo = false;
 		if (!this._ctx.Config.Editor.TransformHide) {
-			gizmo = this.DrawGizmo(ref transform, ImGui.GetContentRegionAvail().X, disabled);
+			gizmo = this.DrawGizmo(ref transform, ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0), disabled);
 			isEnded = this._gizmo.IsEnded;
 		}
 
 		var table = this._table.Draw(
 			transform,
 			out var result,
-			TransformTableFlags.Default | TransformTableFlags.UseAvailable
+			TransformTableFlags.Default | TransformTableFlags.UseAvailable | TransformTableFlags.Operation
 		);
 		if (table) transform = result;
 		isEnded |= this._table.IsDeactivated;
@@ -197,9 +209,12 @@ public class ObjectWindow : KtisisWindow {
 				this._ctx.Selection.Select(siblingNode, SelectMode.Multiple); // if a sibling exists, select it assuming SelectMode.Multiple
 
 			ImGui.SameLine(0, spacing);
+		} else {
+			ImGui.Dummy(iconBtnSize);
+			ImGui.SameLine(0, spacing);
 		}
 
-		var avail = ImGui.GetContentRegionAvail().X;
+		var avail = ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0);
 		if (avail > iconSize)
 			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + avail - iconSize);
 

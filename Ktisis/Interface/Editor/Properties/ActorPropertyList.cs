@@ -222,9 +222,11 @@ public class ActorPropertyList : ObjectPropertyList {
 		// calc button space for camera and gizmo buttons
 		var btnSpace = Icons.CalcIconSize(FontAwesomeIcon.Eye).X
 			+ Icons.CalcIconSize(FontAwesomeIcon.LocationArrow).X
-			+ spacing * 3;
+			+ spacing * 5;
 		ImGui.SameLine(0, spacing);
-		ImGui.SameLine(0, ImGui.GetContentRegionAvail().X - btnSpace);
+
+		ImGui.SameLine(0, 0);
+		ImGui.SetCursorPosX(ImGui.GetCursorPosX() +  ImGui.GetContentRegionAvail().X - btnSpace);  
 
 		// camera tracking - when pressed, toggle enabled and change gaze mode to KtisisFollowCam (or revert to Target mode)
 		using (ImRaii.PushColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive), isTracking)) {
@@ -328,7 +330,7 @@ public class ActorPropertyList : ObjectPropertyList {
 
 			var btnSpace = Icons.CalcIconSize(FontAwesomeIcon.HandPointer).X
 				+ Icons.CalcIconSize(FontAwesomeIcon.EllipsisH).X
-				+ spacing * 3;
+				+ spacing * 5;
 
 			ImGui.SameLine(0, spacing);
 			ImGui.SameLine(0, ImGui.GetContentRegionAvail().X - btnSpace);

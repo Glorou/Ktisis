@@ -14,6 +14,7 @@ using Ktisis.Data.Config;
 using Ktisis.Editor.Context;
 using Ktisis.Interface.Components.Config;
 using Ktisis.Interface.Types;
+using Ktisis.Interface.Windows.ToolbarModules;
 using Ktisis.Services.Data;
 using Ktisis.Localization;
 
@@ -79,6 +80,7 @@ public class ConfigWindow : KtisisWindow {
 			(this.Locale.Translate("config.input.title"), this.DrawInputTab),
 			(this.Locale.Translate("config.input.cameras.title"), this.DrawCamerasInputTab),
 			(this.Locale.Translate("config.input.gizmo.title"), this.DrawGizmoInputTab),
+			(this.Locale.Translate("config.input.toolbar.title"), this.DrawToolbarInputTab),
 			(this.Locale.Translate("config.about.title"), this.DrawAboutTab)
 		];
 	}
@@ -117,12 +119,12 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.TableNextColumn();
 		this.DrawTabNode(0, [1, 2]);
 		this.DrawTabNode(3, [4, 5, 6, 7]);
-		this.DrawTabNode(8, [9, 10]);
-		this.DrawTabNode(11);
+		this.DrawTabNode(8, [9, 10, 11]);
+		this.DrawTabNode(12);
 
 		ImGui.TableNextColumn();
 		var avail = ImGui.GetContentRegionAvail();
-		using var _frame = ImRaii.Child("##ConfigContent", avail, false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize);
+		using var _frame = ImRaii.Group();
 		var (_, drawFn) = this.Tabs[this._tabIndex];
 		drawFn();
 	}
@@ -196,7 +198,14 @@ public class ConfigWindow : KtisisWindow {
 	private void DrawWorkspaceTab() {
 		ImGui.Text(this.Locale.Translate("config.workspace.header"));
 		ImGui.Spacing();
-
+		
+		if (ImGui.Checkbox(this.Locale.Translate("config.workspace.toolbar"), ref this.Config.Editor.UseToolbar)) {
+			if (this._context.Current is { IsValid: true, IsGPosing: true }) {
+				var popup = this._gui.CreatePopup<ChangeStatePopup>(this._context.Current!);
+				popup.Open();
+			}
+		}
+		this.DrawHint("config.workspace.hintToolbar");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.init"), ref this.Config.Editor.OpenOnEnterGPose);
 		this.DrawHint("config.workspace.hintInit");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.incognitoPlayerNames"), ref this.Config.Editor.IncognitoPlayerNames);
@@ -204,14 +213,15 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
-		ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
-		this.DrawHint("config.workspace.hint_AutoResizeObj");
+
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.toggleOpenWindows"), ref this.Config.Editor.ToggleOpenWindows);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyPoseTabs"), ref this.Config.Editor.UseLegacyPoseViewTabs);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.editOnSelect"), ref this.Config.Editor.ToggleEditorOnSelect);
+			ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
+			this.DrawHint("config.workspace.hint_AutoResizeObj");
 			using (ImRaii.Disabled(!this.Config.Editor.ToggleEditorOnSelect))
 				ImGui.Checkbox(this.Locale.Translate("config.workspace.closeOnDeselect"), ref this.Config.Editor.CloseEditorOnDeselect);
 		}
@@ -271,6 +281,15 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Text(this.Locale.Translate("config.input.help"));
 		using var _disable = ImRaii.Disabled(!this.Config.Keybinds.Enabled);
 		this._keybinds.Draw("gizmo");
+	}
+	
+	private void DrawToolbarInputTab() {
+		ImGui.Text(this.Locale.Translate("config.input.toolbar.header"));
+		ImGui.Spacing();
+
+		ImGui.Text(this.Locale.Translate("config.input.help"));
+		using var _disable = ImRaii.Disabled(!this.Config.Keybinds.Enabled);
+		this._keybinds.Draw("toolbar");
 	}
 	
 	

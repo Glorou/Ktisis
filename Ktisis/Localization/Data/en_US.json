@@ -35,7 +35,14 @@
 		"Camera_Work_Fast": "Work camera fast-speed modifier",
 		"Camera_Work_Slow": "Work camera slow-speed modifier",
 		"Pose_FlipPose": "Flip pose",
-		"Gizmo_MirrorRotation": "Cycle rotation modes"
+		"Gizmo_MirrorRotation": "Cycle rotation modes",
+		"Toolbar_ToggleWorkspace": "Switch to the Workspace Window",
+		"Toolbar_ToggleObject": "Switch to the Object Editor",
+		"Toolbar_ToggleActor": "Switch to the Actor Editor",
+		"Toolbar_TogglePose": "Switch to Pose View",
+		"Toolbar_ToggleEnv": "Switch to the Environment Editor",
+		"Toolbar_ToggleCamera": "Switch to the Camera Editor",
+		"Toolbar_ToggleConfig": "Switch to the Configuration Window"
 	},
 	
 	"actors": {
@@ -315,6 +322,8 @@
 			"header": "Workspace Settings",
 			"init": "Open workspace when entering GPose",
 			"toggleOpenWindows": "UI buttons toggle windows open & closed",
+			"toolbar": "Use Ktisis Toolbar",
+			"hintToolbar": "Experimental: This is an alternate UI which puts all of Ktisis' editors into one window.\nPlease provide any feedback, as this option is actively under development!",
 			"editOnSelect": "Open object editor when selecting from the workspace",
 			"closeOnDeselect": "Close object editor when nothing is selected",
 			"incognitoPlayerNames": "Incognito Mode",
@@ -368,6 +377,10 @@
 			"gizmo": {
 				"title": "Gizmo",
 				"header": "Gizmo Actions:"
+			},
+			"toolbar":{
+				"title": "Toolbar",
+				"header": "Toolbar Controls:"
 			}
 		},
 		"autosave": {
