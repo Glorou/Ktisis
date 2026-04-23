@@ -143,7 +143,7 @@ public class SceneTree {
 			if (isHover && this.IsNodeHovered(pos, size, rightAdjust)) {
 				if (ImGui.IsMouseClicked(ImGuiMouseButton.Middle)) {
 					this._ctx.Interface.OpenEditorFor(node);
-				} else if (io.MouseReleased[0] && io.MouseDownDurationPrev[0] < 200) {
+				} else if (io.MouseReleased[0] && io.MouseDownDurationPrev[0] < 0.5f) {
 					// if we shift-click, handle the multi-select for this node later after tree rendering
 					if (ImGui.IsKeyDown(ImGuiKey.ModShift)) shiftClicked = true;
 					else {
