@@ -66,7 +66,7 @@ public class ToolbarWindow : KtisisWindow {
 	}
 
 	public override void Draw() {
-		ImGuiP.CalcWindowNextAutoFitSize(ImGuiP.GetCurrentWindow());
+		using var a = ImRaii.PushId("##ToolbarMain");
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
 		
 		// WorkspaceState
@@ -151,9 +151,9 @@ public class ToolbarWindow : KtisisWindow {
 		this._subWindow.OnOpen();
 	}
 
-	public override void OnSafeToRemove() {
+	public override void OnClose() {
 		this._subWindow?.Close();
 		this._subWindow?.OnSafeToRemove();
-		base.OnSafeToRemove();
+		base.OnClose();
 	}
 }
