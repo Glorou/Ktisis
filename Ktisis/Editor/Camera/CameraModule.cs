@@ -136,7 +136,7 @@ public class CameraModule : HookModule {
 		return result;
 	}
 	
-	[Signature("48 83 EC 28 8B 41 48", DetourName = nameof(CameraPreUpdateDetour))]
+	[Signature("8B 41 ?? 85 C0 74 ?? 83 F8 ?? 75 ?? 48 8B 41", DetourName = nameof(CameraPreUpdateDetour))]
 	private Hook<CameraPreUpdateDelegate> CameraPreUpdateHook = null!;
 	private delegate nint CameraPreUpdateDelegate(nint a1);
 	
@@ -186,7 +186,7 @@ public class CameraModule : HookModule {
 	
 	// Collision hook
 
-	[Signature("E8 ?? ?? ?? ?? 4C 8D 45 97 89 83 ?? ?? ?? ??", DetourName = nameof(CameraCollideDetour))]
+	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? F3 0F 58 1D", DetourName = nameof(CameraCollideDetour))]
 	private Hook<CameraCollideDelegate> CameraCollideHook = null!;
 	private unsafe delegate nint CameraCollideDelegate(GameCamera* a1, Vector3* a2, Vector3* a3, float a4, nint a5, float a6);
 
