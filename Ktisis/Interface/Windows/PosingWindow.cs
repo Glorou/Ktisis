@@ -6,12 +6,18 @@ using System.Numerics;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGuizmo;
+using Dalamud.Interface.Windowing;
 
+using Ktisis.Common.Utility;
 using Ktisis.Data.Config.Pose2D;
 using Ktisis.Data.Serialization;
+using Ktisis.Editor.Camera.Types;
 using Ktisis.Editor.Context.Types;
+using Ktisis.Editor.Transforms.Types;
 using Ktisis.Interface.Components.Posing;
 using Ktisis.Interface.Components.Posing.Types;
+using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Scene.Entities.Game;
@@ -24,11 +30,14 @@ public class PosingWindow : KtisisWindow {
 	private readonly LocaleManager _locale;
 	private readonly GPoseService _gpose;
 	private readonly PoseViewRenderer _render;
+	private readonly Gizmo2D _gizmo;
+	private readonly TransformTable _table;
 
 	private PoseViewSchema? _schema;
 	private ViewEnum _view = ViewEnum.Body;
 
 	internal ActorEntity? _target;
+	private ITransformMemento? Transform;
 
 	private enum ViewEnum {
 		Body,
@@ -39,7 +48,9 @@ public class PosingWindow : KtisisWindow {
 		IEditorContext ctx,
 		ITextureProvider tex,
 		LocaleManager locale,
-		GPoseService gpose
+		GPoseService gpose,
+		TransformTable table,
+		Gizmo2D gizmo
 	) : base(
 		"Pose View###KtisisPoseView"
 	) {
@@ -47,6 +58,8 @@ public class PosingWindow : KtisisWindow {
 		this._locale = locale;
 		this._gpose = gpose;
 		this._render = new PoseViewRenderer(ctx.Config, tex);
+		this._table = table;
+		this._gizmo = gizmo;
 	}
 
 	public override void OnOpen() {
@@ -60,13 +73,13 @@ public class PosingWindow : KtisisWindow {
 	}
 
 	public override void PreDraw() {
-		if(!this._ctx.Config.Editor.UseToolbar)
-			this.SizeConstraints = new WindowSizeConstraints {
-				MinimumSize = new Vector2(500, 350)
-			};
+		this.SizeConstraints = new WindowSizeConstraints {
+			MinimumSize = new Vector2(500 + TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2, 350)
+		};
 	}
 
 	public override void Draw() {
+		var target = this._ctx.Transform.Target;
 		if (this._ctx.Config.Editor.UseLegacyPoseViewTabs && !this._ctx.Config.Editor.UseToolbar) {
 			this.DrawLegacyTabs();
 			return;
@@ -86,6 +99,13 @@ public class PosingWindow : KtisisWindow {
 		}
 
 		this.DrawWindow(this._target);
+
+		
+		if (this._ctx.Config.Editor.UseToolbar) {
+			ImGui.SameLine();
+			using var _ = ImRaii.Group();
+			this.DrawTransform(target);
+		}
 	}
 
 	private bool UpdateTarget() {
@@ -254,5 +274,83 @@ public class PosingWindow : KtisisWindow {
 			return;
 
 		frame.DrawView(view, width, height, template);
+	}
+	
+	//Gizmo
+
+	private void DrawTransform(ITransformTarget? target) {
+		var transform = target?.GetTransform() ?? new Transform();
+
+		var disabled = target == null;
+		using var _ = ImRaii.Disabled(disabled);
+
+		var moved = this.DrawTransform(ref transform, out var isEnded, disabled);
+		if (target != null && moved) {
+			this.Transform ??= this._ctx.Transform.Begin(target);
+			this.Transform.SetTransform(transform);
+		}
+		
+		if (!isEnded) return;
+		this.Transform?.Dispatch();
+		this.Transform = null;
+	}
+	
+	private bool DrawTransform(ref Transform transform, out bool isEnded, bool disabled) {
+		isEnded = false;
+		
+		var gizmo = false;
+		if (!this._ctx.Config.Editor.TransformHide) {
+			gizmo = this.DrawGizmo(ref transform, ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0), disabled);
+			isEnded = this._gizmo.IsEnded;
+		}
+
+		var table = this._table.Draw(
+			transform,
+			out var result,
+			TransformTableFlags.Default | TransformTableFlags.UseAvailable | TransformTableFlags.Operation
+		);
+		if (table) transform = result;
+		isEnded |= this._table.IsDeactivated;
+
+		return gizmo || table;
+	}
+	private unsafe bool DrawGizmo(ref Transform transform, float width, bool disabled) {
+		var size = new Vector2(width, 300);
+
+		this._gizmo.Begin(size, "pose");
+		this._gizmo.Mode = this._ctx.Config.Gizmo.Mode;
+		this._gizmo.Operation = this._ctx.Config.Gizmo.Operation.HasFlag(ImGuizmoOperation.RotateX) && !this._ctx.Config.Gizmo.Operation.HasFlag(ImGuizmoOperation.RotateScreen)
+			? ImGuizmoOperation.RotateX | ImGuizmoOperation.RotateY | ImGuizmoOperation.RotateZ
+			: ImGuizmoOperation.Rotate;
+		
+		if (disabled) {
+			this._gizmo.End();
+			return false;
+		}
+
+		var cameraFov = 1.0f;
+		var cameraPos = Vector3.Zero;
+		if (this._ctx.Cameras.IsWorkCameraActive) {
+			var freeCam = (WorkCamera)this._ctx.Cameras.Current;
+			cameraFov = freeCam.Camera->RenderEx->FoV;
+			cameraPos = freeCam.Position;
+		} else {
+			var camera = CameraService.GetGameCamera();
+			if (camera != null) {
+				cameraFov = camera->FoV;
+				cameraPos = camera->CameraBase.SceneCamera.Object.Position;
+			}
+		}
+		
+		var matrix = transform.ComposeMatrix();
+		this._gizmo.SetLookAt(cameraPos, transform.Position, cameraFov, (size.X - ImGui.GetStyle().WindowPadding.X * 2) / (size.Y - ImGui.GetStyle().WindowPadding.Y * 2));
+		var result = this._gizmo.Manipulate(ref matrix, out _);
+		
+		this._gizmo.End();
+
+		if (result)
+			transform.DecomposeMatrixPrecise(matrix, transform);
+
+		return result;
 	}
 }
