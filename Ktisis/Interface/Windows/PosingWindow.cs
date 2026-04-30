@@ -9,6 +9,9 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Bindings.ImGuizmo;
 using Dalamud.Interface.Windowing;
 
+using GLib.Widgets;
+
+using Ktisis.Common.Extensions;
 using Ktisis.Common.Utility;
 using Ktisis.Data.Config.Pose2D;
 using Ktisis.Data.Serialization;
@@ -33,11 +36,13 @@ public class PosingWindow : KtisisWindow {
 	private readonly Gizmo2D _gizmo;
 	private readonly TransformTable _table;
 
+
 	private PoseViewSchema? _schema;
 	private ViewEnum _view = ViewEnum.Body;
 
 	internal ActorEntity? _target;
 	private ITransformMemento? Transform;
+	private bool FlyoutOpen;
 
 	private enum ViewEnum {
 		Body,
@@ -60,6 +65,7 @@ public class PosingWindow : KtisisWindow {
 		this._render = new PoseViewRenderer(ctx.Config, tex);
 		this._table = table;
 		this._gizmo = gizmo;
+		this.FlyoutOpen = false;
 	}
 
 	public override void OnOpen() {
@@ -74,7 +80,7 @@ public class PosingWindow : KtisisWindow {
 
 	public override void PreDraw() {
 		this.SizeConstraints = new WindowSizeConstraints {
-			MinimumSize = new Vector2(500 + TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2, 350)
+			MinimumSize = new Vector2(500, 350)
 		};
 	}
 
@@ -102,9 +108,22 @@ public class PosingWindow : KtisisWindow {
 
 		
 		if (this._ctx.Config.Editor.UseToolbar) {
-			ImGui.SameLine();
-			using var _ = ImRaii.Group();
-			this.DrawTransform(target);
+			if (this.FlyoutOpen) {
+				ImGui.SameLine();
+				using var _ = ImRaii.Group();
+				this.DrawTransform(target);
+				ImGui.SetCursorPos((ImGui.GetContentRegionMax().Sub(Buttons.CalcSize()) - ImGui.GetStyle().WindowPadding).SubX(TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2));
+				if (ImGui.Button("<")) {
+					ImGui.SetWindowSize(ImGui.GetWindowSize().SubX(TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2));
+					this.FlyoutOpen = false;
+				}
+			} else {
+				ImGui.SetCursorPos(ImGui.GetContentRegionMax().Sub(Buttons.CalcSize()) - ImGui.GetStyle().WindowPadding );
+				if (ImGui.Button(">")) {
+					ImGui.SetWindowSize(ImGui.GetWindowSize().AddX(TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2));
+					this.FlyoutOpen = true;
+				}
+			}
 		}
 	}
 
@@ -163,8 +182,8 @@ public class PosingWindow : KtisisWindow {
 
 	private unsafe void DrawWindow(ActorEntity target) {
 		var avail = ImGui.GetContentRegionAvail();
-		if (this._ctx.Config.Editor.UseToolbar)
-			avail = new Vector2(avail.X * .70f, 275);
+		if (this._ctx.Config.Editor.UseToolbar && this.FlyoutOpen)
+			avail = avail.SubX(TransformTable.CalcWidth() + ImGui.GetStyle().WindowPadding.X * 2);
 
 		var width = avail.X * 0.90f;
 		var spacing = ImGui.GetStyle().ItemSpacing.X * 2;
@@ -172,7 +191,7 @@ public class PosingWindow : KtisisWindow {
 		var viewRegion = avail with { X = width - spacing };
 		this.DrawView(target, viewRegion);
 		ImGui.SameLine();
-		if (!this._ctx.Config.Editor.UseToolbar)
+		if (!this._ctx.Config.Editor.UseToolbar || !this.FlyoutOpen)
 			ImGui.SetCursorPosX(width);
 		this.DrawSideMenu(target);
 	}
