@@ -1,4 +1,4 @@
-<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
     <PropertyGroup>
 		<Authors>Chirp</Authors>
 		<Company>Ktisis Tools</Company>
@@ -24,12 +24,9 @@
 		<PackageReference Include="K4os.Compression.LZ4.Legacy" Version="1.3.8" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
 		<PackageReference Include="Penumbra.Api" Version="5.13.1" />
-		<PackageReference Update="DalamudPackager" Version="14.0.2" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="Data\Schema\Categories.xml" />
-	  <Compile Remove="Interface\Windows\ToolbarModules\Pose.cs" />
-	  <None Include="Interface\Windows\ToolbarModules\Pose.cs" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\GLib\GLib\GLib.csproj" />
