@@ -56,7 +56,7 @@ public class Gizmo2D {
 		this.Gizmo.SetMatrix(viewMatrix, projectionMatrix);
 	}
 
-	public void Begin(Vector2 rectSize, string? nameAppend = default) {
+	public void Begin(Vector2 rectSize, string? nameAppend = null) {
 		using var _ = ImRaii.PushStyle(ImGuiStyleVar.FramePadding, Vector2.Zero);
 		using var _border = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
 		rectSize.Y *= this._cfg.Gizmo2DScaleFactor;

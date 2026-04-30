@@ -77,8 +77,9 @@ public class CustomizeEditor(ActorEntity actor) : ICustomizeEditor {
 	private unsafe void UpdateCustomizeData(bool redraw) {
 		var human = actor.GetHuman();
 		if (!redraw && human != null) {
-			Human.DrawData act = new Human.DrawData();
-			act.CustomizeData = human->Customize;
+			var act = new Human.DrawData {
+				CustomizeData = human->Customize
+			};
 			redraw = !human->UpdateDrawData(&act, true);
 		}
 			

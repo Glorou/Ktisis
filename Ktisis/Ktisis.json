@@ -9,7 +9,7 @@
 	"AssemblyVersion": "0.3.16",
 	"ApplicableVersion": "any",
 	"DalamudApiLevel": 15,
-	"TestingDalamudApiLevel": 15,
+	"TestingDalamudApiLevel": 14,
 	"Tags": [
 		"gpose",
 		"posing"

@@ -216,7 +216,7 @@ public class ObjectWindow : KtisisWindow {
 		}
 
 		var avail = ImGui.GetContentRegionAvail().X - (this._ctx.Config.Editor.UseToolbar? 0.1f: 0);
-		if (avail > iconSize)	
+		if (avail > iconSize)
 			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + avail - iconSize);
 
 		var hide = this._ctx.Config.Editor.TransformHide;
