@@ -55,7 +55,7 @@ public class CameraModule : HookModule {
 			return;
 		}
 		var vf = (nint*)address;
-		this.CameraTargetHook = this._interop.HookFromAddress<CameraTargetDelegate>(vf[17], this.CameraTargetDetour);
+		this.CameraTargetHook = this._interop.HookFromAddress<CameraTargetDelegate>(vf[18], this.CameraTargetDetour);
 	}
 
 	public void Setup() {
@@ -112,7 +112,7 @@ public class CameraModule : HookModule {
 
 	[Signature("E8 ?? ?? ?? ?? 48 8B 17 48 8D 4D E0")]
 	private LoadMatrixDelegate _loadMatrix = null!;
-	private unsafe delegate Matrix4x4* LoadMatrixDelegate(RenderCameraEx* camera, Matrix4x4* matrix, int a3, int a4);
+	private unsafe delegate Matrix4x4* LoadMatrixDelegate(RenderCameraEx* camera, Matrix4x4* matrix);
 	
 	// Camera control hooks
 
@@ -160,7 +160,7 @@ public class CameraModule : HookModule {
 				freeCam.Update();
 				var matrix = (Matrix4x4*)&camera->ViewMatrix;
 				*matrix = freeCam.CalculateViewMatrix();
-				this._loadMatrix(freeCam.Camera->RenderEx, matrix, 0, 0);
+				this._loadMatrix(freeCam.Camera->RenderEx, matrix);
 			}
 		} catch (Exception err) {
 			Ktisis.Log.Error($"Failed to handle work camera:\n{err}");
