@@ -53,11 +53,7 @@ public class ToolbarWindow : KtisisWindow {
 			new(this.DrawConfigWindow, FontAwesomeIcon.Cogs, "Settings", typeof(ConfigWindow)),
 		};
 	}
-
-	public override void PreDraw() {
-		base.PreDraw();
-		this.Size = Vector2.Zero;
-	}
+	
 
 	public override void PreOpenCheck() {
 		if (this._ctx.IsValid) return;
@@ -66,7 +62,6 @@ public class ToolbarWindow : KtisisWindow {
 	}
 
 	public override void Draw() {
-		ImGuiP.CalcWindowNextAutoFitSize(ImGuiP.GetCurrentWindow());
 		var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
 		
 		// WorkspaceState
@@ -75,7 +70,7 @@ public class ToolbarWindow : KtisisWindow {
 		
 		// Try to center it?
 		
-		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing))-spacing) / 2);
+		var offset = ((ImGuiP.GetCurrentWindow().ContentSize.X - (this._buttons.Count * (48 + spacing)) - (2 * spacing) - Buttons.CalcSize()) / 2);
 		ImGui.SetCursorPosX(offset);
 		
 		// Subwindow Buttons
@@ -93,15 +88,26 @@ public class ToolbarWindow : KtisisWindow {
 			using var _ = ImRaii.PushColor(ImGuiCol.Button, color);
 			if (Buttons.IconButtonTooltip(button.Icon, button.TooltipText, new Vector2(48, 48)))
 				button.Window();
-			if(button != this._buttons.Last())
-				ImGui.SameLine(0, spacing * 2);
+			ImGui.SameLine(0, spacing * 2);
+		}
+		ImGui.SameLine();
+		using (ImRaii.Group()) {
+			var size = (48 - spacing) / 2;
+			using (var _ = ImRaii.Disabled(!this._ctx.Actions.History.CanUndo))
+				if (Buttons.IconButtonTooltip(FontAwesomeIcon.StepBackward, this._ctx.Locale.Translate("actions.History_Undo"), new Vector2(size, size)))
+					this._ctx.Actions.History.Undo();
+			
+		
+			using (var _ = ImRaii.Disabled(!this._ctx.Actions.History.CanRedo))
+				if (Buttons.IconButtonTooltip(FontAwesomeIcon.StepForward, this._ctx.Locale.Translate("actions.History_Redo"), new Vector2(size, size)))
+					this._ctx.Actions.History.Redo();
 		}
 		// Subwindow
 		if (this._subWindow != null) {
 			ImGui.Spacing();
 			ImGui.Spacing();
-			
-			using var _frame = ImRaii.Group();
+
+
 			this._subWindow.Draw();
 
 		} 
@@ -155,10 +161,9 @@ public class ToolbarWindow : KtisisWindow {
 		}
 		this._subWindow.OnOpen();
 	}
-
-	public override void OnSafeToRemove() {
-		this._subWindow?.Close();
-		this._subWindow?.OnSafeToRemove();
-		base.OnSafeToRemove();
+	
+	public override void OnClose() {
+		base.OnClose();
+		this._gui.Remove(this);
 	}
 }
