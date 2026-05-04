@@ -43,16 +43,13 @@ public class SceneTree {
 	// Draw frame
     
 	public void Draw(float height) {
-		var frame = false;
 		try {
 			var id = ImGui.GetID("SceneTree_Frame");
-			frame = ImGui.BeginChildFrame(id, new Vector2(-1, height));
-			if (!frame) return;
-			this.DrawScene(height);
-		} catch (Exception err) {
-			Ktisis.Log.Error($"Error drawing scene tree:\n{err}");
-		} finally {
-			if (frame) ImGui.EndChildFrame();
+			using (ImRaii.ChildFrame(id, new Vector2(-1, height))) {
+				this.DrawScene(height);
+			}
+		} catch {
+			Ktisis.Log.Error("Error drawing scene tree");
 		}
 	}
 	// Draw scene entities
