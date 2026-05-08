@@ -9,12 +9,16 @@ using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.Havok.Animation.Rig;
 using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
+using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
 
+using Ktisis.Common.Extensions;
+using Ktisis.Common.Utility;
 using Ktisis.Editor.Context;
 using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Services.Game;
+using Ktisis.Structs.Havok;
 
 namespace Ktisis.Editor.Posing;
 
@@ -108,9 +112,24 @@ public sealed class PosingModule : HookModule {
 
 	[Signature("48 8B C4 48 89 58 08 48 89 70 10 F3 0F 11 58", DetourName = nameof(LookAtIK))]
 	private Hook<LookAtIKDelegate> _lookAtIKHook = null!;
-	private delegate nint LookAtIKDelegate(nint a1, nint a2, nint a3, float a4, nint a5, nint a6);
+	private unsafe delegate nint LookAtIKDelegate(bool* a1, LookAtIkSetup* a2, hkVector4f* a3, float a4, hkQsTransformf* a5, LookAtIkRange* a6);
 
-	private nint LookAtIK(nint a1, nint a2, nint a3, float a4, nint a5, nint a6) => nint.Zero;
+	private unsafe nint LookAtIK(bool* a1, LookAtIkSetup*  a2, hkVector4f* a3, float a4, hkQsTransformf* a5, LookAtIkRange* a6) => this._lookAtIKHook.Original(a1, a2, a3, a4, a5, a6);
+	
+	
+	//LookAtIKEntry
+
+	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 55 57 41 54 41 56 41 57 48 8D 6C 24", DetourName = nameof(LookAtIKEntry))]
+	private Hook<LookAtIKEntryDelegate> _lookAtIKEntryHook = null!;
+
+	private delegate bool LookAtIKEntryDelegate(nint a1, nint a2);
+
+	private unsafe bool LookAtIKEntry(nint a1, nint a2) {
+		bool ret = true;
+		if(!this.Manager.IsEnabled)
+			ret = this._lookAtIKEntryHook.Original(a1, a2);
+		return ret;
+	}
 	
 	// KineDriver
 

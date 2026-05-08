@@ -22,6 +22,7 @@ using Ktisis.Scene.Types;
 using Ktisis.Services.Game;
 using Ktisis.Structs.Camera;
 using Ktisis.Editor.Camera.Types;
+using Ktisis.Editor.Posing;
 
 namespace Ktisis.Scene.Modules.Actors;
 
@@ -242,6 +243,7 @@ public class ActorModule : SceneModule {
 			.OfType<ActorEntity>()
 			.ToList();
 
+		ActorEntity? gazeActor = null;
 		foreach (ActorEntity actor in current) {
 			// valid actor with a modified gaze to use
 			if (!actor.IsValid || actor.Gaze == null) continue;
@@ -251,6 +253,7 @@ public class ActorModule : SceneModule {
 
 			// get a characterEx we can work with from the gaze being detoured
 			var detourCharacterEx = (CharacterEx*)(a1 - CharacterEx.GazeOffset);
+			gazeActor = actor;
 			// get the ktisis-made ActorGaze on matched ActorEntity
 			var gaze = (ActorGaze)actor.Gaze;
 			// overwrite gaze at a1 with stored gaze for each gazetype on ActorEntity
@@ -288,6 +291,12 @@ public class ActorModule : SceneModule {
 
 		// call original after we've made our modifications
 		this.ControlGazeHook!.Original(a1);
+
+		if (gazeActor != null) {
+			this.Scene.Context.Posing.SyncFaceModelSpace(gazeActor);
+			HavokPosing.SyncModelSpace(gazeActor.Actor.GetSkeleton(), 1);
+		}
+
 	}
 
 	
