@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Numerics;
+
+using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Interop;
+using Ktisis.Structs.Animation;
 using Ktisis.Structs.Havok;
 
 namespace Ktisis.Editor.Posing.Ik.LookAt;
@@ -18,7 +23,13 @@ public class LookAtSolver(IkModule module) : IDisposable  {
 		if (this.AllocIkRange.Address == nint.Zero)
 			throw new Exception("Allocation for IkRange failed.");
 
-		*this.LookAtSetup = new LookAtIkSetup() { };
+		*this.LookAtSetup = new LookAtIkSetup();
+		*this.LookAtRange = new LookAtIkRange();
+	}
+
+	public unsafe void Solve(PartialSkeleton partialSkeleton, Vector3 lookAt, Skeleton.Bone bone) {
+
+		SkeletonParameterResourceHandle* skp = (SkeletonParameterResourceHandle*)partialSkeleton.SkeletonParameterResourceHandle;
 
 	}
 	

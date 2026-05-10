@@ -114,22 +114,18 @@ public sealed class PosingModule : HookModule {
 	private Hook<LookAtIKDelegate> _lookAtIKHook = null!;
 	private unsafe delegate nint LookAtIKDelegate(bool* a1, LookAtIkSetup* a2, hkVector4f* a3, float a4, hkQsTransformf* a5, LookAtIkRange* a6);
 
-	private unsafe nint LookAtIK(bool* a1, LookAtIkSetup*  a2, hkVector4f* a3, float a4, hkQsTransformf* a5, LookAtIkRange* a6) => this._lookAtIKHook.Original(a1, a2, a3, a4, a5, a6);
+	unsafe internal nint LookAtIK(bool* a1, LookAtIkSetup*  a2, hkVector4f* a3, float a4, hkQsTransformf* a5, LookAtIkRange* a6) => this._lookAtIKHook.Original(a1, a2, a3, a4, a5, a6);
 	
 	
-	//LookAtIKEntry
+	// LookAtIKEntry 
+	// We do this so we can use LookAtIK ourselves
 
 	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 55 57 41 54 41 56 41 57 48 8D 6C 24", DetourName = nameof(LookAtIKEntry))]
 	private Hook<LookAtIKEntryDelegate> _lookAtIKEntryHook = null!;
 
 	private delegate bool LookAtIKEntryDelegate(nint a1, nint a2);
 
-	private unsafe bool LookAtIKEntry(nint a1, nint a2) {
-		bool ret = true;
-		if(!this.Manager.IsEnabled)
-			ret = this._lookAtIKEntryHook.Original(a1, a2);
-		return ret;
-	}
+	private unsafe bool LookAtIKEntry(nint a1, nint a2) => true;
 	
 	// KineDriver
 

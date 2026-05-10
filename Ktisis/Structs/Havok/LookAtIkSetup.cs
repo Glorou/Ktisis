@@ -20,6 +20,6 @@ public struct LookAtIkSetup {
 	
 	
 	/// Angle of the limiting cone; must be in range [ 0, pi ]
-	[FieldOffset(30)] public hkVector4f m_limitAngle;
+	[FieldOffset(30)] public float m_limitAngle;
 	
 }
