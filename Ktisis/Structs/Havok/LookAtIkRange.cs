@@ -8,7 +8,7 @@ namespace Ktisis.Structs.Havok;
 public struct LookAtIkRange {
 	/// Limiting angles in the up direction; must be in range [ -pi/2, pi/2 ]
 	[FieldOffset(0x0)] public float m_limitAngleUp;   // Example:  pi/4  (45deg up)
-	[FieldOffset(4)] public float m_limitAngleDown; // Example: -pi/6  (30deg down)
+	[FieldOffset(0x4)] public float m_limitAngleDown; // Example: -pi/6  (30deg down)
 
 	/// Limiting angle in the side direction; must be in range [ -pi, pi ]
 	[FieldOffset(0x8)] public float m_limitAngleLeft; // Example:  pi/2  (90deg left)
