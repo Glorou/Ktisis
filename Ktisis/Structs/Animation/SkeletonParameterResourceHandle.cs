@@ -6,12 +6,19 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.FFXIV.Client.System.Resource.Handle;
 using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
 
+using InteropGenerator.Runtime.Attributes;
+
 namespace Ktisis.Structs.Animation;
 
 [StructLayout(LayoutKind.Explicit)]
 public unsafe struct SkeletonParameterResourceHandle  {
 	[FieldOffset(0x00)] public ResourceHandle ResourceHandle;
 
+	//E0 some sort of flag, I think E0 and E1 are byte counters for how many objects the arrays have
+	//E8 pointer to E1 bytes representing the # of elements in each group
+	[FieldOffset(0xE0)] public byte ParameterCount;
+	[FieldOffset(0xE1)] public byte GroupCount;
+	[FieldOffset(0xE8)] public byte* GroupElementCount;
 	[FieldOffset(0xF0)] public LookAtParam* Parameters;
 
 
@@ -27,9 +34,10 @@ public unsafe struct SkeletonParameterResourceHandle  {
 		public float Gain;
 		public uint Index;
 	}
-
+	
+	[StructLayout(LayoutKind.Explicit, Size = 0x30)]
 	public struct Group {
-		
+		[FieldOffset(0x00), FixedSizeArray(isString: true)] public FixedSizeArray8<byte> GroupId; //char[8]
 	}
 	
 }

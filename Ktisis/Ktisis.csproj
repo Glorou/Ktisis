@@ -16,7 +16,8 @@
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-	</PropertyGroup>
+        <Use_Dalamud_FFXIVClientStructs>false</Use_Dalamud_FFXIVClientStructs>
+    </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Glamourer.Api" Version="2.7.0" />
@@ -27,6 +28,8 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="Data\Schema\Categories.xml" />
+	  <Compile Remove="Structs\Animation\SkeletonParameterResourceHandle.cs" />
+	  <None Include="Structs\Animation\SkeletonParameterResourceHandle.cs" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\GLib\GLib\GLib.csproj" />
@@ -66,5 +69,13 @@
 	</ItemGroup>
     <ItemGroup>
       <Content Include="Assets\**\*" CopyToOutputDirectory="Always"/>
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Include="FFXIVClientStructs">
+        <HintPath>..\..\FFXIVClientStructs\bin\Debug\FFXIVClientStructs.dll</HintPath>
+      </Reference>
+      <Reference Include="InteropGenerator.Runtime">
+        <HintPath>..\..\FFXIVClientStructs\bin\Debug\InteropGenerator.Runtime.dll</HintPath>
+      </Reference>
     </ItemGroup>
 </Project>

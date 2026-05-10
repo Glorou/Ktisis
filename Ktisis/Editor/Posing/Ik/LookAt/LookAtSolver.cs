@@ -2,6 +2,7 @@
 using System.Numerics;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.FFXIV.Client.System.Resource.Handle;
 using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Interop;
@@ -29,7 +30,26 @@ public class LookAtSolver(IkModule module) : IDisposable  {
 
 	public unsafe void Solve(PartialSkeleton partialSkeleton, Vector3 lookAt, Skeleton.Bone bone) {
 
-		SkeletonParameterResourceHandle* skp = (SkeletonParameterResourceHandle*)partialSkeleton.SkeletonParameterResourceHandle;
+		SkeletonParameterResourceHandle* skp = partialSkeleton.SkeletonParameterResourceHandle;
+		var boneName = bone.BoneName;
+
+		SkeletonParameterResourceHandle.Element? element = null;
+		for (short i = 0; i < skp->GroupCount; i++) {
+			for (short j = 0; i < skp->Groups[i].ElementCount; j++) {
+				if (boneName.Equals(skp->Groups[i].Elements[j].BoneName)) {
+					element = skp->Groups[i].Elements[j];
+				}
+			}
+		}
+
+		if (element == null)
+			return;
+
+		var setupParam = skp->Parameters[element.Value.SetupParameterIndex];
+
+		LookAtRange.
+		this.LookAtSetup->m_limitAngle = setupParam.Limit_Angle;
+		this.LookAtSetup.
 
 	}
 	
