@@ -7,6 +7,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+
 using Ktisis.Common.Utility;
 
 using Newtonsoft.Json;
@@ -29,6 +31,7 @@ public class PenumbraIpcProvider {
 	private readonly AddTemporaryMod _addTemporaryMod;
 	private readonly RemoveTemporaryMod _removeTemporaryMod;
 	private readonly RedrawObject _redrawObject;
+	private readonly GetDrawObjectInfo _drawObjectInfo;
     
 	public PenumbraIpcProvider(
 		IDalamudPluginInterface dpi
@@ -45,6 +48,7 @@ public class PenumbraIpcProvider {
 		this._addTemporaryMod = new AddTemporaryMod(dpi);
 		this._removeTemporaryMod = new RemoveTemporaryMod(dpi);
 		this._redrawObject = new RedrawObject(dpi);
+		this._drawObjectInfo = new GetDrawObjectInfo(dpi);
 	}
 
 	public Dictionary<Guid, string> GetCollections() => this._getCollections.Invoke();
@@ -116,6 +120,10 @@ public class PenumbraIpcProvider {
 		this._addTemporaryMod.Invoke("MareChara_Meta", collectionId, [], manipData, 0);
 	}
 
+	public unsafe nint GameObjectFromDraw(DrawObject* drawObject) {
+		var act = this._drawObjectInfo.Invoke((nint)drawObject);
+		return act.GameObject;
+	}
 	public void Redraw(int index) => this._redrawObject.Invoke(index);
 
 	private Dictionary<string, string> BuildInvisibleSkinPaths() {

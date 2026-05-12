@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.Havok.Animation.Rig;
 using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
@@ -17,7 +21,9 @@ using Ktisis.Editor.Context;
 using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
 using Ktisis.Scene.Entities.Game;
+using Ktisis.Scene.Types;
 using Ktisis.Services.Game;
+using Ktisis.Structs.Animation;
 using Ktisis.Structs.Havok;
 
 namespace Ktisis.Editor.Posing;
@@ -28,6 +34,8 @@ public sealed class PosingModule : HookModule {
 	private readonly PosingManager Manager;
 	private readonly ActorService _actors;
 	private readonly IpcProvider _ipc;
+	private readonly ContextManager _ctx;
+	private readonly IFramework _framework;
 
 	public event SkeletonInitHandler? OnSkeletonInit;
 	public event Action? OnDisconnect;
@@ -37,10 +45,14 @@ public sealed class PosingModule : HookModule {
 		PosingManager manager,
 		ActorService actors,
 		ContextManager contextManager,
-		IDalamudPluginInterface dpi
+		IDalamudPluginInterface dpi,
+		IFramework framework
 	) : base(hook) {
+		this._ctx = contextManager;
 		this.Manager = manager;
 		this._actors = actors;
+		this._framework = framework;
+		
 		this._ipc = new IpcProvider(contextManager, dpi);
 	}
 	
@@ -52,12 +64,14 @@ public sealed class PosingModule : HookModule {
 		base.EnableAll();
 		this.IsEnabled = true;
 		this._ipc.InvokePosingChanged(this.IsEnabled);
+		this._framework.Update += this.UpdateGaze;
 	}
 
 	public override void DisableAll() {
 		base.DisableAll();
 		this.IsEnabled = false;
 		this._ipc.InvokePosingChanged(this.IsEnabled);
+		this._framework.Update -= this.UpdateGaze;
 	}
 	
 	// Posing hooks - thanks to perchbird (@lmcintyre) for his initial implementation of these.
@@ -120,12 +134,31 @@ public sealed class PosingModule : HookModule {
 	// LookAtIKEntry 
 	// We do this so we can use LookAtIK ourselves
 
-	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 55 57 41 54 41 56 41 57 48 8D 6C 24", DetourName = nameof(LookAtIKEntry))]
+	[Signature("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 81 EC ?? ?? ?? ?? 0F 29 74 24 ?? 48 8B 05", DetourName = nameof(LookAtIKEntry))]
 	private Hook<LookAtIKEntryDelegate> _lookAtIKEntryHook = null!;
 
-	private delegate bool LookAtIKEntryDelegate(nint a1, nint a2);
+	private unsafe delegate byte LookAtIKEntryDelegate(nint a1, nint* a2);
 
-	private unsafe bool LookAtIKEntry(nint a1, nint a2) => true;
+	private unsafe byte LookAtIKEntry(nint a1, nint* a2) => 0;
+		
+		/*Skeleton* skel = (Skeleton*)(a2 - 0x4);
+
+
+		if (this._ctx.Current is { IsValid: true }) {
+			this._framework.RunOnFrameworkThread(() => {
+				var owner = this._actors.GetSkeletonOwner(skel);
+				if (owner != null) {
+					var entity = this._ctx.Current.Scene.GetEntityForActor(owner);
+					if (entity is { IsValid: true } && entity.Gaze.HasValue) {
+						this._lookAtIKEntryHook.Original.Invoke(a1, a2);
+						this._syncModelSpaceHook.Original.Invoke(skel->PartialSkeletons[0].GetHavokPose(0));
+					}
+				}
+			});
+		}
+
+		return 0;*/
+	
 	
 	// KineDriver
 
@@ -197,5 +230,28 @@ public sealed class PosingModule : HookModule {
 			Ktisis.Log.Error(err.ToString());
 		}
 		return this._disconnectHook.Original(a1);
+	}
+
+
+
+	private unsafe void UpdateGaze(IFramework framework) {
+		if(this._ctx.Current is { IsValid: true }) {
+			var actors = this._ctx.Current.Scene.Children.Where(p => p.Type == EntityType.Actor).Cast<ActorEntity>();
+			foreach(var actor in actors.Where(p => p.Gaze.HasValue)) {
+				SkeletonParamResourceHandle* param = (SkeletonParamResourceHandle*)actor.Actor.GetSkeleton()->PartialSkeletons[0].SkeletonParameterResourceHandle;
+				var gaze = actor.Gaze!.Value;
+
+				if (gaze.Eyes.Gaze.Mode != 0) {
+					
+				}
+				if (gaze.Head.Gaze.Mode != 0) {
+					
+				}
+				if (gaze.Torso.Gaze.Mode != 0) {
+					
+				}
+
+			}
+		}
 	}
 }

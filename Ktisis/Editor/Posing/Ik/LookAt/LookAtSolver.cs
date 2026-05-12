@@ -30,10 +30,10 @@ public class LookAtSolver(IkModule module) : IDisposable  {
 
 	public unsafe void Solve(PartialSkeleton partialSkeleton, Vector3 lookAt, Skeleton.Bone bone) {
 
-		SkeletonParameterResourceHandle* skp = partialSkeleton.SkeletonParameterResourceHandle;
+		SkeletonParamResourceHandle* skp = partialSkeleton.SkeletonParameterResourceHandle;
 		var boneName = bone.BoneName;
 
-		SkeletonParameterResourceHandle.Element? element = null;
+		SkeletonParamResourceHandle.Element? element = null;
 		for (short i = 0; i < skp->GroupCount; i++) {
 			for (short j = 0; i < skp->Groups[i].ElementCount; j++) {
 				if (boneName.Equals(skp->Groups[i].Elements[j].BoneName)) {
@@ -47,7 +47,7 @@ public class LookAtSolver(IkModule module) : IDisposable  {
 
 		var setupParam = skp->Parameters[element.Value.SetupParameterIndex];
 
-		LookAtRange.
+		LookAtRange->m_limitAngleDown = setupParam.
 		this.LookAtSetup->m_limitAngle = setupParam.Limit_Angle;
 		this.LookAtSetup.
 
