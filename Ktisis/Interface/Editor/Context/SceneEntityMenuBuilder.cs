@@ -135,10 +135,8 @@ public class SceneEntityMenuBuilder {
 				sub.Action("Glamourer: Apply design", () => this.Ui.OpenApplyDesign(actor));
 			if (this._ctx.Plugin.Ipc.IsCustomizeActive)
 				sub.Action("Customize: Assign profile", () => this.Ui.OpenAssignCProfile(actor));
-			if (this._ctx.Plugin.Ipc.IsAnyMcdfActive && actor.GetHuman() != null) {
-				actor.AssignedProfile = null;
+			if (this._ctx.Plugin.Ipc.IsAnyMcdfActive && actor.GetHuman() != null)
 				sub.Action("Revert all IPC data", () => this._ctx.Characters.Mcdf.Revert(actor.Actor));
-			}
 		});
 	}
 
