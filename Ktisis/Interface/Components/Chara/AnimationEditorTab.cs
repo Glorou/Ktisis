@@ -386,7 +386,7 @@ public class AnimationEditorTab {
 	}
 
 	private class AnimationFilter : IFilterProvider<GameAnimation> {
-		private AnimType Type = AnimType.Emote;
+		private AnimType Type = AnimType.Action;
 
 		public bool SlotFilterActive;
 		public TimelineSlot Slot = TimelineSlot.FullBody;
