@@ -79,6 +79,7 @@ public class PluginDataEditorTab {
 
 	public unsafe void DrawCustomizePlus(ActorEntity actor) {
 		var cPlus = this._ipcManager.GetCustomizeIpc();
+
 		
 		var currentId = cPlus.GetActiveProfileId(actor.Actor.ObjectIndex).Id;
 		if (currentId != null) {
@@ -111,8 +112,6 @@ public class PluginDataEditorTab {
 			}
 			ImGui.EndCombo();
 		}
-		ImGui.SameLine();
-		ImGui.Text("C+ Profile");
 	}
 
 	public void DrawPenumbra(ActorEntity actor) {
@@ -148,8 +147,6 @@ public class PluginDataEditorTab {
 			}
 			ImGui.EndCombo();
 		}
-		ImGui.SameLine();
-		ImGui.Text("Penumbra Collection");
 
 		if (ImGui.Button("Apply Invisible skin")) {
 			this._ctx.Characters.Mcdf.SetInvisibleSkin(actor);
