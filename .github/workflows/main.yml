@@ -44,7 +44,7 @@ jobs:
           }
 
   build:
-    needs: check-for-changes
+    needs: [check-for-changes]
     if: ${{ needs.check-for-changes.outputs.should_run == 'true' }}
     runs-on: windows-2022
     steps:
