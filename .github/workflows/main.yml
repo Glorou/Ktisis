@@ -13,7 +13,7 @@ jobs:
   check-for-changes:
     runs-on: windows-2022
     outputs:
-      should_run: ${{steps.check_changes.outputs.should_run}}
+      should-run: ${{steps.check_changes.outputs.should_run}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
 
   build:
     needs: [check-for-changes]
-    if: ${{ needs.check-for-changes.outputs.should_run == 'true' }}
+    if: ${{ needs.check-for-changes.outputs.should-run == 'true' }}
     runs-on: windows-2022
     steps:
       - name: Checkout
