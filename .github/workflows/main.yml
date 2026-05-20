@@ -24,7 +24,7 @@ jobs:
         id: lastrun
         run: |
           $WorkflowFile = "main.yml"
-          $url = "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&sort=updated&per_page=1"
+          $url = "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${WorkflowFile}/runs?status=success&sort=updated&per_page=1"
           $req = Invoke-WebRequest -Uri $url
           $json = $req.Content | ConvertFrom-Json
           $timestamp = $json.workflow_runs[0].head_commit.timestamp
@@ -37,10 +37,10 @@ jobs:
           $commitsSinceLast = git log --since="{$env.LAST_RUN_TIMESTAMP} --pretty=oneline
           if($commitsSinceLast -gt 0){
             Write-Host "Commits since last run, will build"
-            Write-Host "should_run=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+           $env:GITHUB_ENV+="should_run=true"
           }else{
             Write-Host "No new commits since last run, stopping action"
-            Write-Host "should_run=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            $env:GITHUB_ENV+="should_run=false" 
           }
 
   build:
