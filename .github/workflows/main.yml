@@ -34,13 +34,13 @@ jobs:
         id: changecompare
         run: |
           Write-Host $Env:LAST_RUN_TIMESTAMP
-          $commitsSinceLast = git log --since="{$env.LAST_RUN_TIMESTAMP} --pretty=oneline
+          $commitsSinceLast = git log --since="{$env.LAST_RUN_TIMESTAMP}" --pretty=oneline
           if($commitsSinceLast -gt 0){
             Write-Host "Commits since last run, will build"
-           $env:GITHUB_ENV+="should_run=true"
+            Write-Host "should_run=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }else{
             Write-Host "No new commits since last run, stopping action"
-            $env:GITHUB_ENV+="should_run=false" 
+            Write-Host "should_run=false" | Out-File -FilePath  -Encoding utf8 -Append
           }
 
   build:
