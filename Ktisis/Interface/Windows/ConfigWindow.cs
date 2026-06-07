@@ -213,6 +213,9 @@ public class ConfigWindow : KtisisWindow {
 		var refresh = ImGui.Checkbox(this.Locale.Translate("config.categories.allow_nsfw"), ref this.Config.Categories.ShowNsfwBones);
 		this.DrawHint("config.categories.hint_nsfw");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
+		
+		ImGui.Checkbox("Disable Camera DoF on startup", ref this.Config.Editor.DisableCameraDofStartup);
+		ImGui.Checkbox("Disable Animation Looping on startup", ref this.Config.Editor.DisableAnimationLoopStartup);
 
 		ImGui.Spacing();
 

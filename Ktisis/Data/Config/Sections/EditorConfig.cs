@@ -56,6 +56,11 @@ public class EditorConfig {
 
 	public bool FlyoutOpen = false;
 	
+	// Vanilla changes
+
+	public bool DisableAnimationLoopStartup = false;
+	public bool DisableCameraDofStartup = false;
+	
 	// Helpers
 
 	public EntityDisplay GetDisplayForType(EntityType type)

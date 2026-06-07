@@ -4,7 +4,10 @@ using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
+
 using Ktisis.Core.Attributes;
+using Ktisis.Data.Config;
 using Ktisis.Events;
 
 namespace Ktisis.Services.Game;
@@ -16,8 +19,11 @@ public class GPoseService : IDisposable {
 	private readonly IClientState _clientState;
 	private readonly IFramework _framework;
 	private readonly ITargetManager _targets;
+	private readonly ConfigManager _cfg;
 	
 	private readonly Event<Action> _updateEvent;
+
+	private short ticks;
 	public event Action Update {
 		add => this._updateEvent.Add(value);
 		remove => this._updateEvent.Remove(value);
@@ -40,13 +46,16 @@ public class GPoseService : IDisposable {
 		IFramework framework,
 		ITargetManager targets,
 		Event<Action> updateEvent,
-		Event<Action<GPoseService, bool>> gposeEvent
+		Event<Action<GPoseService, bool>> gposeEvent,
+		ConfigManager cfg
 	) {
 		this._clientState = clientState;
 		this._framework = framework;
 		this._targets = targets;
 		this._updateEvent = updateEvent;
 		this._gposeEvent = gposeEvent;
+		this._cfg = cfg;
+		this.StateChanged +=(this.EditVanillaGposeSettings);
 	}
 
 	private bool _isSubscribed;
@@ -70,6 +79,27 @@ public class GPoseService : IDisposable {
 		if (state) this._updateEvent.Invoke();
 	}
 
+
+	private unsafe void EditVanillaGposeSettings(GPoseService sender, bool state) {
+		if (state) {
+			
+			var gpose = EventFramework.Instance();
+			if (this._cfg.GetConfigFileExists()) {
+				if (this._cfg.File.Editor.DisableAnimationLoopStartup) {
+					byte* anim = (byte*)(((nint)gpose) + 0x691);
+					*anim |= 1;
+				}
+				if (this._cfg.File.Editor.DisableCameraDofStartup) {
+					byte* dof = (byte*)(((nint)gpose) + 0x312);
+					if (*dof == 0x16){
+						*dof = 0x14;
+						dof[2] = 0x0;
+					}
+				}
+			}
+		}
+		
+	}
 	public void Dispose() {
 		this._framework.Update -= this.OnFrameworkUpdate;
 		this._isSubscribed = false;
