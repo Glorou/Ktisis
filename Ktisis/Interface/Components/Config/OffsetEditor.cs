@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -43,6 +44,8 @@ public class OffsetEditor {
 
 	public void Setup() {
 		this.UpdateContext();
+		if (Config.BoneOffsets == null)
+			Config.BoneOffsets = new Dictionary<string, Dictionary<string, Vector3>>();
 		// set a default skeleton to view to the first entry
 		if (this.Config.BoneOffsets.Keys.Count > 0)
 			this.SelectedRaceSexId = this.Config.BoneOffsets.Keys.OrderBy(k => k).First();
@@ -204,11 +207,12 @@ public class OffsetEditor {
 		ImGui.TableSetupColumn("Bone Name");
 		ImGui.TableHeadersRow();
 
-		foreach (var (bone, vec) in this.Config.BoneOffsets[this.SelectedRaceSexId!].OrderBy(k => k.Key).ToList()) {
-			var vector = vec;
-			if (this.DrawOffsetRow(bone, ref vector, oldPadding))
-				this.Config.UpsertOffset(this.SelectedRaceSexId!, bone, vector);
-		}
+		if(this.Config.BoneOffsets.TryGetValue(this.SelectedRaceSexId!, out var s))
+			foreach (var (bone, vec) in  s.OrderBy(k => k.Key).ToList()){
+				var vector = vec;
+				if (this.DrawOffsetRow(bone, ref vector, oldPadding))
+					this.Config.UpsertOffset(this.SelectedRaceSexId!, bone, vector);
+			}
 	}
 
 	private bool DrawOffsetRow(string bone, ref Vector3 vec, Vector2 padding) {
