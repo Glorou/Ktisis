@@ -7,6 +7,7 @@ using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
 using Dalamud.Plugin.Services;
 
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
@@ -23,6 +24,8 @@ using Ktisis.Services.Game;
 using Ktisis.Structs.Camera;
 using Ktisis.Editor.Camera.Types;
 
+using ObjectType = FFXIVClientStructs.FFXIV.Client.Game.Object.ObjectType;
+
 namespace Ktisis.Scene.Modules.Actors;
 
 public class ActorModule : SceneModule {
@@ -30,6 +33,7 @@ public class ActorModule : SceneModule {
 	private readonly IObjectTable _objectTable;
 	private readonly IFramework _framework;
 	private readonly GroupPoseModule _gpose;
+	private readonly ISceneManager _scene;
 	
 	private readonly ActorSpawner _spawner;
 	
@@ -41,6 +45,7 @@ public class ActorModule : SceneModule {
 		IFramework framework,
 		GroupPoseModule gpose
 	) : base(hook, scene) {
+		this._scene = scene;
 		this._actors = actors;
 		this._objectTable = objectTable;
 		this._framework = framework;
@@ -205,6 +210,45 @@ public class ActorModule : SceneModule {
 		}
 	}
 	
+	public unsafe void  KarousStupidTest() {
+		this._framework.RunOnFrameworkThread((() => {
+			var ae = ((ActorEntity?)this._scene.Context.Selection.GetFirstSelected());
+			if (ae == null)
+				return;
+
+			var bc = (BattleChara*)ae.CsGameObject;
+			if (bc->CompanionObject == null) {			//vf12
+				var index = ClientObjectManager.Instance()->CreateBattleCharacter();
+				Character* chara= ClientObjectManager.Instance()->GetObjectByIndex((ushort)index);
+				bc->CompanionObject = (Companion*)ClientObjectManager.Instance()->GetObjectByIndex((ushort)index);
+				bc->Mode = CharacterModes.RidingPillion;
+				bc->Mount.MountObject = (Character*)bc->CompanionObject;
+				bc->Mount.CreateAndSetupMount(0x15A, 1, 0, 0, 0, 0, 0);
+				((delegate*unmanaged<Character*>)((void**)chara->VirtualTable)[12])();
+			} /*else if (bc->CompanionObject->DrawObject != null) {
+				// Determine what type of object it is, mount, companion, or fashion accessory  note for names : Companions have them, if one was in the slot prior it will set the first byte as null and the rest will contain the old vals
+				Character* type = null; //ignore this
+				switch (bc->CompanionObject->ObjectKind) {
+					case ObjectKind.Companion:
+						type = (Character*)bc->CompanionData.CompanionObject;
+						break;
+					case ObjectKind.Ornament:
+						type = (Character*)bc->OrnamentData.OrnamentObject;
+						break;
+					case ObjectKind.Mount:
+						type = (Character*)bc->Mount.MountObject;
+						break;
+				}
+				if (type != null) {
+					ClientObjectManager.Instance()->DeleteObjectByIndex((ushort)(type->ObjectIndex - 200), 0x0);
+					type = null;
+				}
+
+			}*/
+
+		}));
+	}
+	
 	// Hooks
 	
 	[Signature("40 56 57 48 83 EC 38 48 89 5C 24 ??", DetourName = nameof(AddCharacterDetour))]
@@ -222,7 +266,7 @@ public class ActorModule : SceneModule {
 			Ktisis.Log.Error($"Failed to handle character add for 0x{address:X}:\n{err}");
 		}
 	}
-
+	
 	[Signature("45 33 D2 4C 8D 81 ?? ?? ?? ?? 41 8B C2 4C 8B C9 49 3B 10")]
 	private RemoveCharacterDelegate _removeCharacter = null!;
 	private unsafe delegate nint RemoveCharacterDelegate(GPoseState* gpose, CSGameObject* gameObject);

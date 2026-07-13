@@ -13,6 +13,7 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.Interop;
 
 using KamiToolKit;
 using KamiToolKit.Classes;
@@ -31,6 +32,8 @@ using Ktisis.Editor.Posing.Types;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Factory.Builders;
+
+using Lumina.Excel.Sheets;
 
 using Newtonsoft.Json;
 
@@ -119,13 +122,12 @@ public unsafe class PreviewNode : OverlayNode {
 			Id = 0
 		});
 
-
 		
 		var part = this.Image.AddPart(new Part { 		
 			Height = 320,
 			Width = 192,});
-		part->LoadTexture(this._renderTargetManager->CharaViewTextures[1]);
-		this._renderTargetManager->CharaViewTextures[1].Value->IncRef();
+		part->LoadTexture(this._renderTargetManager->CharaViewTextures[5]);
+		this._renderTargetManager->CharaViewTextures[5].Value->IncRef();
 		
 		var bgpart = this.ImageBacking.AddPart(new Part { 		
 			Height = 320,
@@ -134,13 +136,13 @@ public unsafe class PreviewNode : OverlayNode {
 		
 
 		this._framework.RunOnFrameworkThread(() => {
-			this._agentInspect->CharaView.Initialize(&this._agentInspect->AgentInterface, 1, 0);
+			this._agentInspect->CharaView.Initialize(&this._agentInspect->AgentInterface, 5, 0);
 			this._agentInspect->CharaView.ModelData.CopyFromCharacter((Character*)target.Actor.Address);
 		});
 
 		this.Buttons = this.SetupButtons();
 		
-		this._actor = new ActorEntity(this._ctx.Scene, new PoseBuilder(this._ctx.Scene), this._objectTable[441]);
+		this._actor = new ActorEntity(this._ctx.Scene, new PoseBuilder(this._ctx.Scene), this._objectTable[445]);
 		this._actor.Setup();
 		this._framework.Update += this.OnFramework;
 		
@@ -152,16 +154,44 @@ public unsafe class PreviewNode : OverlayNode {
 		this._agentInspect->CharaView.Update(this._counter, this._agentInspect->CharaView.GetCharacter());
 	}
 
+	private unsafe void CopyTargetAppearance() {
+		var targetActor = this._target.GetHuman();
+		var previewGameObj = (Character*) this._actor.CsGameObject;
+
+		if (targetActor->EquipmentModels != previewGameObj->DrawData.EquipmentModelIds) {
+			foreach (var modelId in previewGameObj->DrawData.EquipmentModelIds) {
+				if (!targetActor->EquipmentModels.Contains(modelId)) {
+					var index = previewGameObj->DrawData.EquipmentModelIds.IndexOf(modelId);
+					previewGameObj->DrawData.EquipmentModelIds[index] = targetActor->EquipmentModels[index];
+					previewGameObj->DrawData.LoadEquipment((DrawDataContainer.EquipmentSlot)index, previewGameObj->DrawData.EquipmentModelIds.GetPointer(index), true);
+				}
+			}
+		}
+		
+		targetActor->EquipmentModels.CopyTo(previewGameObj->DrawData.EquipmentModelIds);
+		targetActor->Customize.Data.CopyTo(previewGameObj->DrawData.CustomizeData.Data);
+		previewGameObj->DrawData.CustomizeData.Normalize(&previewGameObj->DrawData.CustomizeData);
+	}
+	
+	
 	/// <summary>
 	/// Framework update for our preview window, required to work 
 	/// </summary>
 	private void OnFramework(IFramework framework) {
-		/*if (this.needsToApplyCollection && this._objectTable[441]?.Address != null) {
-			var ipc = this._ctx.Plugin.Ipc.GetPenumbraIpc();
-			var collection = ipc.GetCollectionForObject(this._target.Actor);
-			ipc.SetCollectionForObject(this._objectTable[441], collection.Id);
-			this.needsToApplyCollection = false;
-		}*/
+
+		if (this._counter < 5) {
+			this._counter++;
+			if (this._objectTable[445]?.Address != null) {
+				var ipc = this._ctx.Plugin.Ipc.GetPenumbraIpc();
+				var collection = ipc.GetCollectionForObject(this._target.Actor);
+				ipc.SetCollectionForObject(this._actor.Actor, collection.Id);
+			}
+			return;
+		}
+		
+		if(this._actor.GetHuman() != null){
+			this.CopyTargetAppearance();
+		}
 
 		this._agentInspect->CharaView.Update(this._counter, this._actor.Character);
 		this._agentInspect->CharaView.Render(this._counter++);
@@ -188,6 +218,7 @@ public unsafe class PreviewNode : OverlayNode {
 		}
 	}
 
+	// Nodes and helpers
 	private NodeBase SetupButtons() {
 		NodeBase buttonsNode = new ResNode() {
 			Size = new Vector2(168.0f, 32.0f),

@@ -9,6 +9,9 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+
 using Ktisis.Common.Utility;
 using Ktisis.Data.Files;
 using Newtonsoft.Json;
@@ -20,6 +23,7 @@ using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
 using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Modules.Actors;
 
 namespace Ktisis.Interface.Windows;
 
@@ -102,6 +106,7 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Provider", this.DrawProviderTab);
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
+		DrawTab("Karous Shit", this.DrawKarousTestTab);
 	}
 	private static void DrawTab(string name, Action handler) {
 		using var tab = ImRaii.TabItem(name);
@@ -290,6 +295,21 @@ public class DebugWindow : KtisisWindow {
 		ImGui.Spacing();
 		
 		DrawTransform();
+	}
+	
+	private unsafe void DrawKarousTestTab() {
+		// existing debug text from overlay
+		var actors = this._ctx.Scene.GetModule<ActorModule>();
+
+		using(ImRaii.Disabled(!this._ctx.Scene.GetFirstActor().IsValid))
+			if (ImGui.Button("Do the thing")) {
+				actors.KarousStupidTest();
+			}
+		// todo: scenetree / actors and entities details
+		ImGui.Spacing();
+		ImGui.Separator();
+		ImGui.Spacing();
+		
 	}
 
 	private void DrawTransform()

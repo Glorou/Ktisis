@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
+using Lumina.Excel.Sheets;
+
 namespace Ktisis.Structs.Actors;
 
 [Flags]
@@ -33,6 +35,10 @@ public struct CharacterEx {
 
 	[FieldOffset(0x630)] public unsafe nint* _emoteControllerVf;
 	[FieldOffset(0x630)] public EmoteController EmoteController;
+
+	[FieldOffset(0x670)] public unsafe nint* _mountContainerVf;
+	[FieldOffset(0x670)] public MountContainer MountContainer;
+	
 	
 	[FieldOffset(0x0CE2)] public CombatFlags CombatFlags;
 	
