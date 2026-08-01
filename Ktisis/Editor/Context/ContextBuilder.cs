@@ -16,6 +16,7 @@ using Ktisis.Editor.Selection;
 using Ktisis.Editor.Transforms;
 using Ktisis.Interface.Editor;
 using Ktisis.Interop;
+using Ktisis.Interop.Hooking;
 using Ktisis.Scene;
 using Ktisis.Scene.Factory;
 using Ktisis.Services.Data;
@@ -78,8 +79,7 @@ public class ContextBuilder {
 		var attach = new AttachManager();
 		this._sceneData = new SceneDataService(context, this._objectTable, this._framework);
 		var autoSave = new PoseAutoSave(context, this._framework, this._format, this._sceneData );
-
-
+		
 		
 		var editor = new EditorState(context, scope) {
 			Actions = actions,

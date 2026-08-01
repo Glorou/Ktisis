@@ -8,6 +8,8 @@ using Dalamud.Plugin.Services;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Actions.Types;
 using Ktisis.Common.Extensions;
@@ -39,6 +41,7 @@ public class PosingManager : IPosingManager {
 	public IAttachManager Attachments { get; }
 
 	private readonly PoseAutoSave AutoSave;
+	private Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> _poseMap = new();
 
 	public PosingManager(
 		IEditorContext context,
@@ -329,6 +332,18 @@ public class PosingManager : IPosingManager {
 		});
 	}
 
+	public void SetuphkaPose(ActorEntity actor) => this.PoseModule?.SetupActorBlend(actor);
+	public unsafe void SetupPoseForActor(ActorEntity actor) {
+		var skel = actor.CharacterBaseEx->Base.Skeleton;
+		var partialmap = new Dictionary<ushort, Tuple<nint, nint>>();
+		var partialCount = skel->PartialSkeletonCount;
+		for (ushort i = 0; i < partialCount; i++) {
+			var oldpose = skel->PartialSkeletons[i].GetHavokPose(0);
+			var newPose = IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+			partialmap.Add(i, new Tuple<nint, nint>((nint)oldpose, (nint)newPose));
+		}
+		this._poseMap.Add(actor, partialmap);
+	}
 	// Disposal
 
 	public void Dispose() {

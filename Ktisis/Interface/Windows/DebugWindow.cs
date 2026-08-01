@@ -8,22 +8,29 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
+using Dalamud.Plugin.Services;
 
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
+using FFXIVClientStructs.Havok.Animation.Playback;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Common.Utility;
 using Ktisis.Data.Files;
 using Newtonsoft.Json;
 
 using Ktisis.Data.Config;
+using Ktisis.Editor.Animation;
 using Ktisis.Editor.Context.Types;
+using Ktisis.Editor.Posing;
 using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
+using Ktisis.Interop.Hooking;
+using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
-using Ktisis.Scene.Modules.Actors;
+using Ktisis.Scene.Types;
+using Ktisis.Services.Game;
 
 namespace Ktisis.Interface.Windows;
 
@@ -31,6 +38,7 @@ public class DebugWindow : KtisisWindow {
 	private readonly IEditorContext _ctx;
 	private readonly GuiManager _gui;
 	private readonly TransformTable _transformTable;
+	private readonly IFramework _framework;
 
 	// tester inputs
 	private int _gameObjectId;
@@ -47,6 +55,12 @@ public class DebugWindow : KtisisWindow {
 	private string _boneName = string.Empty;
 	private bool _useWorldSpace = true;
 	private string _batchBoneNames = "j_kao";
+
+	private unsafe hkaAnimatedSkeleton* skel = null;
+	private unsafe hkaAnimatedSkeleton* oldAnim = null;
+	private unsafe hkaPose* newPose = null;
+	private unsafe hkaPose* oldPose = null;
+	
 
 	// ktisis subscriptions
 	private readonly ICallGateSubscriber<(int, int)> _ktisisApiVersion;
@@ -68,12 +82,14 @@ public class DebugWindow : KtisisWindow {
 		GuiManager gui,
 		IDalamudPluginInterface dpi,
 		ConfigManager cfg,
-		LocaleManager locale
+		LocaleManager locale,
+		IFramework framework
 	) : base(
 		"Debug Window", windowId:"###KtisisDebug"
 	) {
 		this._ctx = ctx;
 		this._gui = gui;
+		this._framework = framework;
 
 		// create our IPC subs from DPI
 		this._ktisisApiVersion = dpi.GetIpcSubscriber<(int, int)>("Ktisis.ApiVersion");
@@ -106,7 +122,7 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Provider", this.DrawProviderTab);
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
-		DrawTab("Karous Shit", this.DrawKarousTestTab);
+		DrawTab("Havok", this.DrawHavokTab);
 	}
 	private static void DrawTab(string name, Action handler) {
 		using var tab = ImRaii.TabItem(name);
@@ -296,21 +312,6 @@ public class DebugWindow : KtisisWindow {
 		
 		DrawTransform();
 	}
-	
-	private unsafe void DrawKarousTestTab() {
-		// existing debug text from overlay
-		var actors = this._ctx.Scene.GetModule<ActorModule>();
-
-		using(ImRaii.Disabled(!this._ctx.Scene.GetFirstActor().IsValid))
-			if (ImGui.Button("Do the thing")) {
-				actors.KarousStupidTest();
-			}
-		// todo: scenetree / actors and entities details
-		ImGui.Spacing();
-		ImGui.Separator();
-		ImGui.Spacing();
-		
-	}
 
 	private void DrawTransform()
 	{
@@ -318,6 +319,8 @@ public class DebugWindow : KtisisWindow {
 		if (target?.GetTransform() == null)
 			return;
 		var trans = target.GetTransform()!;
+		if(this._ctx.Selection.GetFirstSelected().Type == EntityType.BoneNode)
+			ImGui.Text($"{((BoneNode)this._ctx.Selection.GetFirstSelected()).Info.BoneIndex}");
 		ImGui.Text($"Target: {target.Primary?.Name}");
 		ImGui.Text($"Position:\n\tX: {trans.Position.X}\n\tY: {trans.Position.Y}\n\tZ: {trans.Position.Z}");
 		ImGui.Text($"Rotation:\n\tX: {trans.Rotation.X}\n\tY: {trans.Rotation.Y}\n\tZ: {trans.Rotation.Z}\n\tW: {trans.Rotation.W}");
@@ -339,7 +342,64 @@ public class DebugWindow : KtisisWindow {
 			ImGui.Text($"Scale:\n\tX: {scl.X} / {t.Scale.X}\n\tY: {scl.Y} / {t.Scale.Y}\n\tZ: {scl.Z} / {t.Scale.Z}");
 		}
 	}
+	
+	private unsafe void DrawHavokTab() {
 
+		using var _ = ImRaii.Disabled(this._ctx.Selection.Count == 0);
+		if (ImGui.Button("Create new owned HkaPose")) {
+			this.skel = IMemorySpace.GetAnimationSpace()->Malloc<hkaAnimatedSkeleton>();
+			this.oldAnim = (hkaAnimatedSkeleton*)((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokAnimatedSkeletons[0];
+			this.skel->Ctor1(((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->GetHavokPose(0)->Skeleton);
+		}
+		if (this.skel != null) {
+			ImGui.Text($"new pose:{(nint)this.skel:X8}");
+			ImGui.Text($"old pose:{(nint)this.oldPose:X8}");
+			if (ImGui.Button("Overwrite Skeleton")) {
+				var temp = ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons;
+				temp->HavokAnimatedSkeletons[0] = (ulong)this.skel;
+			}
+		}
+		if (ImGui.Button("StartupBlendService")) {
+			this._ctx.Posing.SetuphkaPose((ActorEntity)this._ctx.Selection.GetFirstSelected());
+			//this._ctx.Animation.Setupthatshit((ActorEntity)this._ctx.Selection.GetFirstSelected());
+		}
+		/*
+			if (ImGui.Button("Create new owned HkaPose##a")) {
+				this.newPose = IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+				this.oldPose = (hkaPose*)((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokPoses[0];
+				this.newPose->Ctor1(hkaPose.PoseSpace.LocalSpace, ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->Skeleton->PartialSkeletons[0].GetHavokPose(0)->Skeleton, &this.newPose->LocalPose);
+			}
+			if (this.newPose != null) {
+				ImGui.Text($"new pose:{(nint)this.skel:X8}");
+				ImGui.Text($"old pose:{(nint)this.oldPose:X8}");
+				if (ImGui.Button("Overwrite Pose")) {
+					var temp = ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokPoses;
+					temp[0] = (ulong)this.newPose;
+				}
+			}*/
+		
+		
+	}
+	
+	
+	
+	private unsafe void CapturePose(ActorEntity actor) {
+		var skele = actor.GetHuman()->Skeleton;
+		var partial = skele->PartialSkeletons[1];
+    
+		var hkAnimSkele = partial.GetHavokAnimatedSkeleton(0);
+		if (hkAnimSkele->AnimationControls.Length == 0)
+			hkAnimSkele = partial.GetHavokAnimatedSkeleton(1);
+		var ctrl = hkAnimSkele->AnimationControls[0].Value;
+		var duration = ctrl->Binding.ptr->Animation.ptr->Duration;
+		ctrl->hkaAnimationControl.Weight = 1.0f;
+		ctrl->hkaAnimationControl.LocalTime = duration;
+                
+		var pose = partial.GetHavokPose(0);
+		hkAnimSkele->sampleAndCombineAnimations(pose->LocalPose.Data, pose->FloatSlotValues.Data);
+		HavokPosing.SyncModelSpace(skele, 1);
+
+	}
 	private bool CheckClipboard() {
 		var text = ImGui.GetClipboardText();
         if (text != null) {

@@ -7,6 +7,7 @@ using Dalamud.Plugin;
 using Dalamud.Utility.Signatures;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
 using FFXIVClientStructs.Havok.Animation.Rig;
 using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 
@@ -67,7 +68,7 @@ public sealed class PosingModule : HookModule {
 	private Hook<SetBoneModelSpaceDelegate> _setBoneModelSpaceHook = null!;
 	private delegate ulong SetBoneModelSpaceDelegate(nint partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate);
 
-	private ulong SetBoneModelSpace(nint partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate) => boneId;
+	private ulong SetBoneModelSpace(nint partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate) => this._setBoneModelSpaceHook.Original.Invoke(partial, boneId, transform, enableSecondary, enablePropagate);
 	
 	// SyncModelSpace
 
@@ -78,7 +79,8 @@ public sealed class PosingModule : HookModule {
 	private unsafe void SyncModelSpace(hkaPose* pose) {
 		if (this.Manager.IsSolvingIk)
 			this._syncModelSpaceHook.Original(pose);
-		
+		if(pose == this.oldPose)
+			this.OnTick();
 		// do nothing
 	}
 
@@ -91,7 +93,7 @@ public sealed class PosingModule : HookModule {
 	}
 	
 	// CalcBoneModelSpace
-	
+	/*
 	[Signature("40 53 48 83 EC 10 4C 8B 49 28", DetourName = nameof(CalcBoneModelSpace))]
 	private Hook<CalcBoneModelSpaceDelegate> _calcBoneModelSpaceHook = null!;
 	private unsafe delegate hkQsTransformf* CalcBoneModelSpaceDelegate(hkaPose* pose, int boneIdx);
@@ -105,7 +107,7 @@ public sealed class PosingModule : HookModule {
 		}
 		return pose->ModelPose.Data + boneIdx;
 	}
-	
+	*/
 	// LookAtIK
 
 	[Signature("48 8B C4 48 89 58 08 48 89 70 10 F3 0F 11 58", DetourName = nameof(LookAtIK))]
@@ -130,7 +132,7 @@ public sealed class PosingModule : HookModule {
 	private Hook<AnimFrozenDelegate> _animFrozenHook = null!;
 	private delegate byte AnimFrozenDelegate(nint a1, int a2);
 
-	private byte AnimFrozen(nint a1, int a2) => 1;
+	private byte AnimFrozen(nint a1, int a2) => this._animFrozenHook.Original.Invoke(a1, a2);
 	
 	// UpdatePos
 
@@ -154,6 +156,45 @@ public sealed class PosingModule : HookModule {
 		}
 		return result;
 	}
+	
+	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 49 8B F8")]
+	private hkaBlendDelegate _hkaBlend = null!;
+	private unsafe delegate void hkaBlendDelegate(
+		hkQsTransformf* dstOut,
+		hkQsTransformf* srcL,
+		hkQsTransformf* srcR,
+		float* alpha,
+		int n,
+		int blendMode,
+		int rotationMode
+	);
+	
+	private unsafe hkaPose* newPose;
+	private unsafe hkaPose* oldPose;
+	private Single weight;
+
+
+	public unsafe void OnTick() {
+		if (this.newPose == null || this.oldPose == null)
+			return;
+		float* ptr = stackalloc float[1];
+		*ptr = .5f;
+		
+		this.newPose->LocalPose[0] = this.oldPose->LocalPose[0];
+		this.newPose->LocalPose[1] = this.oldPose->LocalPose[1];
+		this.newPose->LocalPose[10] = this.oldPose->LocalPose[10];
+		this.newPose->LocalPose[11] = this.oldPose->LocalPose[11];
+		//set the root to be the same
+		var a = this.oldPose->LocalPose[11];
+		this._hkaBlend.Invoke(this.oldPose->LocalPose.Data, this.newPose->LocalPose.Data,this.oldPose->LocalPose.Data, ptr, this.oldPose->LocalPose.Length, 0x0, 0x0);
+		var b = this.oldPose->LocalPose.Data[11];
+	}
+	public unsafe void SetupActorBlend(ActorEntity actor) {
+		this.newPose = IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+		this.oldPose = (hkaPose*)actor.GetHuman()->Skeleton->PartialSkeletons->HavokPoses[0];
+		this.newPose->Ctor1(hkaPose.PoseSpace.LocalSpace, actor.GetHuman()->Skeleton->PartialSkeletons->Skeleton->PartialSkeletons[0].GetHavokPose(0)->Skeleton, &this.newPose->LocalPose);
+	}
+
 
 	private unsafe void HandleRestoreState(Skeleton* skeleton, ushort partialId) {
 		if (!this.Manager.IsValid || !this.IsEnabled || skeleton->PartialSkeletons == null) return;

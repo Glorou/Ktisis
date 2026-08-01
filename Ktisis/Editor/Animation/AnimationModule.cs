@@ -1,8 +1,21 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 using Dalamud.Hooking;
+using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 
+using FFXIVClientStructs;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.Havok.Animation.Animation;
+using FFXIVClientStructs.Havok.Animation.Rig;
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
+using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
+
+using Ktisis.Common.Extensions;
+using Ktisis.Editor.Posing;
 using Ktisis.Interop.Hooking;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Structs.Actors;
@@ -10,9 +23,14 @@ using Ktisis.Structs.Actors;
 namespace Ktisis.Editor.Animation;
 
 public class AnimationModule : HookModule {
+
+	private readonly IFramework _framework;
 	public AnimationModule(
-		IHookMediator hook
-	) : base(hook) { }
+		IHookMediator hook,
+		IFramework framework
+	) : base(hook) {
+		this._framework = framework;
+	}
 	
 	public bool SpeedControlEnabled { get; set; }
 	
