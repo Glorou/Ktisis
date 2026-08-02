@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 using Dalamud.Game.ClientState.Objects.Types;
@@ -7,16 +9,19 @@ using Dalamud.Plugin;
 using Dalamud.Utility.Signatures;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Client.System.Memory;
 using FFXIVClientStructs.Havok.Animation.Rig;
 using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 
+using Ktisis.Common.Extensions;
 using Ktisis.Data.Json;
 using Ktisis.Editor.Context;
 using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Services.Game;
+using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Editor.Posing;
 
@@ -79,8 +84,8 @@ public sealed class PosingModule : HookModule {
 	private unsafe void SyncModelSpace(hkaPose* pose) {
 		if (this.Manager.IsSolvingIk)
 			this._syncModelSpaceHook.Original(pose);
-		if(pose == this.oldPose)
-			this.OnTick();
+		if(this.Poses.Any(p => p.OriginalPose == pose))
+			this.OnTick(this.Poses.First(p => p.OriginalPose == pose));
 		// do nothing
 	}
 
@@ -169,30 +174,28 @@ public sealed class PosingModule : HookModule {
 		int rotationMode
 	);
 	
-	private unsafe hkaPose* newPose;
-	private unsafe hkaPose* oldPose;
-	private Single weight;
+	
 
-
-	public unsafe void OnTick() {
-		if (this.newPose == null || this.oldPose == null)
-			return;
+	public unsafe void OnTick(ReplacementPose replacementPose) {
 		float* ptr = stackalloc float[1];
 		*ptr = .5f;
 		
-		this.newPose->LocalPose[0] = this.oldPose->LocalPose[0];
-		this.newPose->LocalPose[1] = this.oldPose->LocalPose[1];
-		this.newPose->LocalPose[10] = this.oldPose->LocalPose[10];
-		this.newPose->LocalPose[11] = this.oldPose->LocalPose[11];
+		replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->LocalPose[0];
+		replacementPose.Pose->LocalPose[1] = replacementPose.OriginalPose->LocalPose[1];
 		//set the root to be the same
-		var a = this.oldPose->LocalPose[11];
-		this._hkaBlend.Invoke(this.oldPose->LocalPose.Data, this.newPose->LocalPose.Data,this.oldPose->LocalPose.Data, ptr, this.oldPose->LocalPose.Length, 0x0, 0x0);
-		var b = this.oldPose->LocalPose.Data[11];
+		this._hkaBlend.Invoke(replacementPose.OriginalPose->LocalPose.Data, replacementPose.Pose->LocalPose.Data,replacementPose.OriginalPose->LocalPose.Data, ptr, replacementPose.OriginalPose->LocalPose.Length, 0x0, 0x0);
 	}
-	public unsafe void SetupActorBlend(ActorEntity actor) {
-		this.newPose = IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
-		this.oldPose = (hkaPose*)actor.GetHuman()->Skeleton->PartialSkeletons->HavokPoses[0];
-		this.newPose->Ctor1(hkaPose.PoseSpace.LocalSpace, actor.GetHuman()->Skeleton->PartialSkeletons->Skeleton->PartialSkeletons[0].GetHavokPose(0)->Skeleton, &this.newPose->LocalPose);
+	public List<ReplacementPose> Poses = new List<ReplacementPose>();
+	public unsafe void SetupPoseReplacements(ActorEntity actor) {
+		for (ushort i = 0; i < ((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount; i++) {
+			ReplacementPose toAdd = new ReplacementPose();
+			toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+			toAdd.OriginalPose = actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0);
+			toAdd.Pose->Ctor1(hkaPose.PoseSpace.LocalSpace, actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0)->Skeleton, &toAdd.Pose->LocalPose);
+			toAdd.Owner = actor;
+			toAdd.PartitionIndex = i;
+			this.Poses.Add(toAdd);
+		}
 	}
 
 

@@ -8,6 +8,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Common.Extensions;
 
@@ -24,6 +26,7 @@ using Ktisis.Scene.Modules.Actors;
 using Ktisis.Scene.Types;
 using Ktisis.Structs.Actors;
 using Ktisis.Data.Config.Sections;
+using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Scene.Entities.Game;
 
@@ -345,4 +348,7 @@ public class ActorEntity : CharaEntity, IDeletable, IHideable {
 
 		return 0;
 	}
+	
+	// Replacement Poses
+
 }
