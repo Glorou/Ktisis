@@ -27,6 +27,10 @@ public class ConfigManager : IDisposable {
 
 	public event OnConfigSaved? OnSaved;
 
+	public delegate void ConfigLoaded(Configuration config);
+
+	private ConfigLoaded? configLoadedCallbacks;
+
 	public ConfigManager(
 		IDalamudPluginInterface dpi
 	) {
@@ -41,6 +45,7 @@ public class ConfigManager : IDisposable {
 		timer.Start();
 
 		Configuration? cfg = null;
+		var fileExists = this.GetConfigFileExists();
 
 		try {
 			// TODO: Legacy migration
@@ -61,10 +66,15 @@ public class ConfigManager : IDisposable {
 		}
 
 		if (cfg is null) {
+			if (fileExists) {
+				this.BackupConfigFile();
+				Ktisis.Log.Warning($"Configuration failed to load; existing file backed up");
+				Ktisis.WarningNotification($"Failed to load Ktisis configuration. A backup of the old file was saved.");
+			}
 			try {
 				cfg = this.CreateDefault();
 				this.GenerateDefaultPresets(cfg);
-				created = true;
+				created = !fileExists;
 			} catch (Exception err) {
 				Ktisis.Log.Error($"Failed to create default configuration:\n{err}");
 				throw;
@@ -78,6 +88,27 @@ public class ConfigManager : IDisposable {
 
 		timer.Stop();
 		Ktisis.Log.Debug($"Configuration loaded in {timer.Elapsed.TotalMilliseconds:0.00}ms");
+
+		this.configLoadedCallbacks?.Invoke(this.File);
+		this.configLoadedCallbacks = default;
+	}
+
+	public void WithConfigLoaded(ConfigLoaded callback) {
+		if(this._isLoaded) {
+			callback(this.File);
+		} else {
+			this.configLoadedCallbacks += callback;
+		}
+	}
+
+	private void BackupConfigFile() {
+		try {
+			var path = this.GetConfigFilePath();
+			var backupPath = $"{path}.bak-{DateTime.Now:yyyyMMdd-HHmmss}";
+			System.IO.File.Copy(path, backupPath, overwrite: true);
+		} catch (Exception err) {
+			Ktisis.Log.Error($"Failed to back up configuration file:\n{err}");
+		}
 	}
 
 	public void Save() {
@@ -135,17 +166,23 @@ public class ConfigManager : IDisposable {
 
 	private Configuration? OpenConfigFile() {
 		Ktisis.Log.Verbose("Loading configuration...");
-		
+
 		var path = this.GetConfigFilePath();
 		if (!Path.Exists(path)) return null;
 
 		var content = System.IO.File.ReadAllText(path);
-		return JsonConvert.DeserializeObject<Configuration>(content);
+		var settings = new JsonSerializerSettings {
+			Error = (_, args) => {
+				Ktisis.Log.Warning($"Skipping invalid configuration member '{args.ErrorContext.Path}':\n{args.ErrorContext.Error.Message}");
+				args.ErrorContext.Handled = true;
+			}
+		};
+		return JsonConvert.DeserializeObject<Configuration>(content, settings);
 	}
 
 	private void SaveConfigFile() {
 		Ktisis.Log.Verbose("Saving configuration...");
-		
+
 		var path = this.GetConfigFilePath();
 		var content = JsonConvert.SerializeObject(this.File, Formatting.Indented);
 		System.IO.File.WriteAllText(path, content);

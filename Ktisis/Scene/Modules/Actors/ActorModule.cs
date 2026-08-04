@@ -7,7 +7,6 @@ using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
 using Dalamud.Plugin.Services;
 
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
@@ -24,8 +23,6 @@ using Ktisis.Services.Game;
 using Ktisis.Structs.Camera;
 using Ktisis.Editor.Camera.Types;
 
-using ObjectType = FFXIVClientStructs.FFXIV.Client.Game.Object.ObjectType;
-
 namespace Ktisis.Scene.Modules.Actors;
 
 public class ActorModule : SceneModule {
@@ -33,24 +30,32 @@ public class ActorModule : SceneModule {
 	private readonly IObjectTable _objectTable;
 	private readonly IFramework _framework;
 	private readonly GroupPoseModule _gpose;
-	private readonly ISceneManager _scene;
 	
 	private readonly ActorSpawner _spawner;
 	
-	public ActorModule(
+	//Creation/Destruction hooks.
+	private readonly Hook<Character.Delegates.Terminate> _terminateHook;
+	private readonly Hook<Character.Delegates.Dtor> _destroyHook;
+	private readonly Hook<Character.Delegates.OnInitialize> _initializeHook;
+
+	public unsafe ActorModule(
 		IHookMediator hook,
 		ISceneManager scene,
 		ActorService actors,
 		IObjectTable objectTable,
 		IFramework framework,
-		GroupPoseModule gpose
+		GroupPoseModule gpose,
+		IGameInteropProvider hooks
 	) : base(hook, scene) {
-		this._scene = scene;
 		this._actors = actors;
 		this._objectTable = objectTable;
 		this._framework = framework;
 		this._gpose = gpose;
 		this._spawner = hook.Create<ActorSpawner>();
+		
+		_terminateHook = hooks.HookFromAddress<Character.Delegates.Terminate>((nint)Character.StaticVirtualTablePointer->Terminate, Terminate);
+		_destroyHook = hooks.HookFromAddress<Character.Delegates.Dtor>((nint)Character.StaticVirtualTablePointer->Dtor, Destructor);
+		_initializeHook = hooks.HookFromAddress<Character.Delegates.OnInitialize>((nint)Character.StaticVirtualTablePointer->OnInitialize, InitializeHook);
 	}
 
 	public override void Setup() {
@@ -88,6 +93,8 @@ public class ActorModule : SceneModule {
 			throw new Exception("Local player not found.");
 		
 		var address = await this._spawner.CreateActor(localPlayer);
+		if (address == nint.Zero)
+			return null;
 		var entity = this.AddSpawnedActor(address);
 		entity.Actor.SetName(PlayerNameUtil.CalcActorName(entity.Actor.ObjectIndex));
 		entity.Actor.SetWorld((ushort)localPlayer.CurrentWorld.RowId);
@@ -99,8 +106,11 @@ public class ActorModule : SceneModule {
 		if (!this._spawner.IsInit)
 			throw new Exception("Actor spawner is uninitialized.");
 		var address = await this._spawner.CreateActor(actor);
+		if (address == nint.Zero)
+			return null;
 		var entity = this.AddSpawnedActor(address);
 		entity.Actor.SetTargetable(true);
+		entity.Visible = true; // draw the root node for newly added overworld actors
 		return entity;
 	}
 
@@ -210,63 +220,8 @@ public class ActorModule : SceneModule {
 		}
 	}
 	
-	public unsafe void  KarousStupidTest() {
-		this._framework.RunOnFrameworkThread((() => {
-			var ae = ((ActorEntity?)this._scene.Context.Selection.GetFirstSelected());
-			if (ae == null)
-				return;
-
-			var bc = (BattleChara*)ae.CsGameObject;
-			if (bc->CompanionObject == null) {			//vf12
-				var index = ClientObjectManager.Instance()->CreateBattleCharacter();
-				Character* chara= ClientObjectManager.Instance()->GetObjectByIndex((ushort)index);
-				bc->CompanionObject = (Companion*)ClientObjectManager.Instance()->GetObjectByIndex((ushort)index);
-				bc->Mode = CharacterModes.RidingPillion;
-				bc->Mount.MountObject = (Character*)bc->CompanionObject;
-				bc->Mount.CreateAndSetupMount(0x15A, 1, 0, 0, 0, 0, 0);
-				((delegate*unmanaged<Character*>)((void**)chara->VirtualTable)[12])();
-			} /*else if (bc->CompanionObject->DrawObject != null) {
-				// Determine what type of object it is, mount, companion, or fashion accessory  note for names : Companions have them, if one was in the slot prior it will set the first byte as null and the rest will contain the old vals
-				Character* type = null; //ignore this
-				switch (bc->CompanionObject->ObjectKind) {
-					case ObjectKind.Companion:
-						type = (Character*)bc->CompanionData.CompanionObject;
-						break;
-					case ObjectKind.Ornament:
-						type = (Character*)bc->OrnamentData.OrnamentObject;
-						break;
-					case ObjectKind.Mount:
-						type = (Character*)bc->Mount.MountObject;
-						break;
-				}
-				if (type != null) {
-					ClientObjectManager.Instance()->DeleteObjectByIndex((ushort)(type->ObjectIndex - 200), 0x0);
-					type = null;
-				}
-
-			}*/
-
-		}));
-	}
-	
 	// Hooks
-	
-	[Signature("40 56 57 48 83 EC 38 48 89 5C 24 ??", DetourName = nameof(AddCharacterDetour))]
-	private Hook<AddCharacterDelegate>? AddCharacterHook = null!;
-	private delegate void AddCharacterDelegate(nint a1, nint a2, ulong a3, nint a4);
 
-	private void AddCharacterDetour(nint gpose, nint address, ulong id, nint a4) {
-		this.AddCharacterHook!.Original(gpose, address, id, a4);
-		if (!this.CheckValid()) return;
-		
-		try {
-			if (id != 0xE0000000)
-				this.AddActor(address, true);
-		} catch (Exception err) {
-			Ktisis.Log.Error($"Failed to handle character add for 0x{address:X}:\n{err}");
-		}
-	}
-	
 	[Signature("45 33 D2 4C 8D 81 ?? ?? ?? ?? 41 8B C2 4C 8B C9 49 3B 10")]
 	private RemoveCharacterDelegate _removeCharacter = null!;
 	private unsafe delegate nint RemoveCharacterDelegate(GPoseState* gpose, CSGameObject* gameObject);
@@ -334,12 +289,106 @@ public class ActorModule : SceneModule {
 		this.ControlGazeHook!.Original(a1);
 	}
 
+
+#region Creation/Destroy hooks
+
+	private unsafe void InitializeHook(Character* thisPtr) {
+		Ktisis.Log.Verbose("[Initialize] New Character? {0:X}", (nint) thisPtr);
+		
+		try {
+			_initializeHook.OriginalDisposeSafe(thisPtr);
+		} catch (Exception e) {
+			Ktisis.Log.Error(e, "Error on Initialize");
+		}
+		
+		if (!this.CheckValid()) return;
+		
+		_framework.RunOnTick(() => {
+			this.Add(thisPtr);
+		}, delayTicks: 1); //delayed to allow internal code to handle 
+	}
+	
+	private unsafe GameObject* Destructor(Character* thisPtr, byte freeFlags) {
+		Remove(thisPtr);
+
+		try {
+			return _destroyHook.OriginalDisposeSafe(thisPtr, freeFlags);
+		} catch (Exception e) {
+			Ktisis.Log.Error(e, "Error on dtor");
+			return null;
+		}
+	}
+	
+	private unsafe void Terminate(Character* character) {
+		Remove(character);
+		
+		try {
+			_terminateHook.OriginalDisposeSafe(character);
+		} catch (Exception e) {
+			Ktisis.Log.Error(e, "Error on terminate");
+		}
+	}
+
+	private unsafe void Remove(Character* character) {
+		try {
+			Ktisis.Log.Debug("Trying to remove actor {0:x}", (nint) character);
+			var gameObject = this._actors.GetAddress((nint)character);
+			if (gameObject is null) {
+				Ktisis.Log.Verbose("Unable to find gameobject for {0:X}", (nint)character);
+
+				return;
+			}
+
+			var entity = this.Scene.GetEntityForActor(gameObject);
+
+			if (entity is null) {
+				Ktisis.Log.Verbose("Unable to find entity for actor {0:X}", (nint)character);
+
+				return;
+			}
+
+			entity.Remove();
+		} catch (Exception e) {
+			Ktisis.Log.Error(e, "Error on Remove");
+		}
+	}
+
+	private unsafe void Add(Character* character) {
+		var gameObject = this._actors.GetAddress((nint)character);
+		if (gameObject is null || gameObject.ObjectIndex < 200) {
+			Ktisis.Log.Verbose("Unable to find gameobject, or below 200 for {0:X} ({1})", (nint)character, gameObject?.ObjectIndex);
+
+			return;
+		}
+
+		// TODO: flaky?
+		// if (!gameObject.IsDrawing()) {
+		// 	Ktisis.Log.Debug("Actor[{0:X} / {1}] Actor not drawing, not adding", (nint)character, gameObject.ObjectIndex);
+		// 	return;
+		// }
+
+		var entity = this.Scene.GetEntityForActor(gameObject);
+
+		if (entity is not null) {
+			return;
+		}
+
+		try {
+			Ktisis.Log.Info("Trying to add actor {0:X}", (nint)character);
+			this.AddActor((nint)character, false);
+		} catch (Exception e) {
+			Ktisis.Log.Error(e, "Error on Remove");
+		}
+	}
+
+#endregion
+
 	
 	// Disposal
 
 	public override void Dispose() {
 		base.Dispose();
 		this._spawner.Dispose();
-		GC.SuppressFinalize(this);
+		GC.SuppressFinalize(this); 
 	}
 }

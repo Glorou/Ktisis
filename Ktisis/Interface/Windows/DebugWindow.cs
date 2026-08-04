@@ -10,15 +10,17 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 
+using Newtonsoft.Json;
+using Dalamud.Plugin.Services;
+
 using FFXIVClientStructs.FFXIV.Client.System.Memory;
 using FFXIVClientStructs.Havok.Animation.Playback;
 using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Common.Utility;
 using Ktisis.Data.Files;
-using Newtonsoft.Json;
-
 using Ktisis.Data.Config;
+using Ktisis.Data.Generation;
 using Ktisis.Editor.Animation;
 using Ktisis.Editor.Context.Types;
 using Ktisis.Editor.Posing;
@@ -37,7 +39,10 @@ namespace Ktisis.Interface.Windows;
 public class DebugWindow : KtisisWindow {
 	private readonly IEditorContext _ctx;
 	private readonly GuiManager _gui;
+	private readonly IFramework _framework;
 	private readonly TransformTable _transformTable;
+	
+	private readonly FaceLibraryGenerator _faceLibGen;
 	private readonly IFramework _framework;
 
 	// tester inputs
@@ -80,6 +85,8 @@ public class DebugWindow : KtisisWindow {
 	public DebugWindow(
 		IEditorContext ctx,
 		GuiManager gui,
+		IFramework framework,
+		FaceLibraryGenerator faceLibGen,
 		IDalamudPluginInterface dpi,
 		ConfigManager cfg,
 		LocaleManager locale,
@@ -109,6 +116,10 @@ public class DebugWindow : KtisisWindow {
 		this._ktisisBatchSetMatrix = dpi.GetIpcSubscriber<uint, Dictionary<string, Matrix4x4>, bool, Task<bool>>("Ktisis.BatchSetMatrix");
 
 		this._transformTable = new TransformTable(cfg, locale);
+		
+		// Expression library
+		this._faceLibGen = faceLibGen;
+		this._faceLibGen.Context = this._ctx;
 	}
 
 	public override void Draw() {
@@ -122,6 +133,7 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Provider", this.DrawProviderTab);
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
+		DrawTab("Expressions", this.DrawExpressionsTab);
 		DrawTab("Havok", this.DrawHavokTab);
 	}
 	private static void DrawTab(string name, Action handler) {
@@ -319,8 +331,6 @@ public class DebugWindow : KtisisWindow {
 		if (target?.GetTransform() == null)
 			return;
 		var trans = target.GetTransform()!;
-		if(this._ctx.Selection.GetFirstSelected().Type == EntityType.BoneNode)
-			ImGui.Text($"{((BoneNode)this._ctx.Selection.GetFirstSelected()).Info.BoneIndex}");
 		ImGui.Text($"Target: {target.Primary?.Name}");
 		ImGui.Text($"Position:\n\tX: {trans.Position.X}\n\tY: {trans.Position.Y}\n\tZ: {trans.Position.Z}");
 		ImGui.Text($"Rotation:\n\tX: {trans.Rotation.X}\n\tY: {trans.Rotation.Y}\n\tZ: {trans.Rotation.Z}\n\tW: {trans.Rotation.W}");
@@ -417,5 +427,20 @@ public class DebugWindow : KtisisWindow {
 	private void SetLastPosingChanged(bool status) {
 		this._lastPosingEventValue = status;
 		this._lastPosingEventTime = DateTime.Now.ToString("hh-mm-ss");
+	}
+	
+	// Expressions tab
+
+	private void DrawExpressionsTab() {
+		if (ImGui.Button("Generate expressions")) {
+			var actor = this._ctx.Scene.GetFirstActor();
+			this._faceLibGen.StartCreateLibrary(actor);
+		}
+
+		if (!this._faceLibGen.InProgress)
+			return;
+
+		var prog = this._faceLibGen.GetStep;
+		ImGui.Text($"Generating: {prog.Current}/{prog.Max}");
 	}
 }

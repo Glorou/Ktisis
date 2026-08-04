@@ -15,6 +15,7 @@ using GLib.Widgets;
 
 using Ktisis.Common.Utility;
 using Ktisis.Data.Config;
+using Ktisis.Data.Config.Sections;
 using Ktisis.Editor.Context;
 using Ktisis.Interface.Components.Config;
 using Ktisis.Interface.Types;
@@ -112,6 +113,10 @@ public class ConfigWindow : KtisisWindow {
 			append += this.Tabs[(int)parentIndex].Item1;
 		else
 			append += this.Tabs[index].Item1;
+
+		if (append == "##") // if we're still ## such as during loading/before a tab is properly open, post _something_ to fill out the ID
+			append += "ConfigLoading";
+
 		if(this.Tabs[index].Item2 != null)
 			if (ImGui.Selectable(this.Locale.Translate(this.Tabs[index].Item1) + append, this._tabIndex == index ))
 				this._tabIndex = index;
@@ -130,6 +135,7 @@ public class ConfigWindow : KtisisWindow {
 
 		ImGui.SameLine();
 		using var _frame = ImRaii.Group();
+		using var _id = ImRaii.PushId($"##ConfigContents"); // try to resolve ImGui Empty ID ## root assertion
 		var (_, drawFn) = this.Tabs[this._tabIndex];
 		drawFn();
 	}
@@ -201,12 +207,29 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Separator();
 		ImGui.Spacing();
 
+		using (var _combo = ImRaii.Combo(this.Locale.Translate("config.overlay.active_state_chooser"), this.Config.Overlay.ActiveStateType.ToString()))
+			if (_combo.Success)
+				foreach (var stateType in Enum.GetValues<ActiveState>())
+					if (ImGui.Selectable(stateType.ToString(), stateType == this.Config.Overlay.ActiveStateType))
+						this.Config.Overlay.ActiveStateType = stateType;
+		ImGui.Spacing();
+		ImGui.Checkbox(this.Locale.Translate("config.overlay.keep_presets_on_active"), ref this.Config.Overlay.PresetsOnActiveActor);
+		ImGui.Checkbox(this.Locale.Translate("config.overlay.dim_inactive"), ref this.Config.Overlay.DimOverlayForInactiveActors);
+		if (this.Config.Overlay.DimOverlayForInactiveActors)
+			ImGui.SliderFloat(this.Locale.Translate("config.overlay.inactive_opacity"), ref this.Config.Overlay.InactiveOpacity, 0.0f, 1.0f);
+
+		ImGui.Spacing();
+		ImGui.Separator();
+		ImGui.Spacing();
+
 		ImGui.DragFloat(this.Locale.Translate("config.overlay.world.dot_radius"), ref this.Config.Overlay.WorldNodeRadius, 0.1f);
 		ImGui.DragFloat(this.Locale.Translate("config.overlay.world.dot_thickness"), ref this.Config.Overlay.WorldNodeOutlineWidth, 0.1f);
 		ImGui.SliderFloat(this.Locale.Translate("config.overlay.world.scale_factor"), ref  this.Config.Overlay.WorldNodeScaleFactor, 0.1f, 1.0f);
 		DrawColorEdit(this.Locale.Translate("config.overlay.world.color"), ref this.Config.Overlay.WorldNodeColor);
+		DrawColorEdit(this.Locale.Translate("config.overlay.world.color_actor"), ref this.Config.Overlay.ActorNodeColor);
+		DrawColorEdit(this.Locale.Translate("config.overlay.world.color_light"), ref this.Config.Overlay.LightNodeColor);
 
-		using (var _combo = ImRaii.Combo("Highlight color when hovering", Enum.GetName(this.Config.Overlay.WorldOutlineColor)))
+		using (var _combo = ImRaii.Combo(this.Locale.Translate("config.overlay.world.highlight_color"), Enum.GetName(this.Config.Overlay.WorldOutlineColor)))
 			if (_combo.Success)
 				foreach (var color in Enum.GetValues<OutlineChoice>())
 					if (ImGui.Selectable(Enum.GetName(color), color == this.Config.Overlay.WorldOutlineColor))
@@ -235,27 +258,34 @@ public class ConfigWindow : KtisisWindow {
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.confirmExit"), ref this.Config.Editor.ConfirmExit);
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.openTray"), ref this.Config.Editor.OpenTrayOnWorkspaceClose);
 		this.DrawHint("config.workspace.hintTrayIcon");
+		ImGui.Checkbox(this.Locale.Translate("config.workspace.selectTarget"), ref this.Config.Editor.SelectOnTarget);
+		this.DrawHint("config.workspace.hintSelectTarget");
 		ImGui.Checkbox(this.Locale.Translate("config.workspace.showHints"), ref this.Config.Editor.ShowHints);
 		this.DrawHint("config.workspace.hintHint");
+		if (this.Config.Editor.ShowHints) {
+			using var _ = ImRaii.PushIndent();
+			ImGui.AlignTextToFramePadding();
+			ImGui.Text(this.Locale.Translate("config.workspace.hintLocation.label"));
+			ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
+			using (var _combo = ImRaii.Combo("", this.Locale.Translate($"config.workspace.hintLocation.{this.Config.Editor.HintLocation.ToString()}")))
+				if (_combo.Success)
+					foreach (var loc in Enum.GetValues<HintLoc>())
+						if (ImGui.Selectable(this.Locale.Translate($"config.workspace.hintLocation.{loc.ToString()}"), loc == this.Config.Editor.HintLocation))
+							this.Config.Editor.HintLocation = loc;
+		}
 
 		ImGui.Spacing();
 
 		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.windowHeader"))) {
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.toggleOpenWindows"), ref this.Config.Editor.ToggleOpenWindows);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyPoseTabs"), ref this.Config.Editor.UseLegacyPoseViewTabs);
+			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyLightEditor"), ref this.Config.Editor.UseLegacyLightEditor);
+			this.DrawHint("config.workspace.legacyLightHint");
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.editOnSelect"), ref this.Config.Editor.ToggleEditorOnSelect);
 			ImGui.Checkbox(this.Locale.Translate("config.workspace.AutoResizeObjectEditor"), ref this.Config.Editor.AutoResizeObjectEditor);
 			this.DrawHint("config.workspace.hint_AutoResizeObj");
 			using (ImRaii.Disabled(!this.Config.Editor.ToggleEditorOnSelect))
 				ImGui.Checkbox(this.Locale.Translate("config.workspace.closeOnDeselect"), ref this.Config.Editor.CloseEditorOnDeselect);
-		}
-		ImGui.Spacing();
-
-		if (ImGui.CollapsingHeader(this.Locale.Translate("config.workspace.legacyHeader"))) {
-			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyWindows"), ref this.Config.Editor.UseLegacyWindowBehavior);
-			this.DrawHint("config.workspace.legacyWindowHint");
-			ImGui.Checkbox(this.Locale.Translate("config.workspace.legacyLightEditor"), ref this.Config.Editor.UseLegacyLightEditor);
-			this.DrawHint("config.workspace.legacyLightHint");
 		}
 		ImGui.Spacing();
 

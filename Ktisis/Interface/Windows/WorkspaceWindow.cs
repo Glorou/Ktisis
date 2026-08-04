@@ -148,21 +148,24 @@ public class WorkspaceWindow : KtisisWindow {
 	// Scene tree buttons
 
 	protected private void DrawSceneTreeButtons() {
-		if (Buttons.IconButtonTooltip(FontAwesomeIcon.PeopleGroup, this._ctx.Locale.Translate("workspace.create_actor")))
+		if (Buttons.IconButtonDropdown(FontAwesomeIcon.PeopleGroup, this.Interface.OpenActorCreateMenu))
 			this._ctx.Scene.Factory.CreateActor().Spawn();
-		if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
-			this.Interface.OpenActorCreateMenu();
+		if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) {
+			using var _ = ImRaii.Tooltip();
+			ImGui.Text(this._ctx.Locale.Translate("workspace.create_actor"));
+		}
 		ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
 
-		if (Buttons.IconButtonTooltip(FontAwesomeIcon.Lightbulb, this._ctx.Locale.Translate("workspace.create_light")))
+		if (Buttons.IconButtonDropdown(FontAwesomeIcon.Lightbulb, this.Interface.OpenLightCreateMenu))
 			this._ctx.Scene.Factory.CreateLight().Spawn();
-		if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
-			this.Interface.OpenLightCreateMenu();
+		if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) {
+			using var _ = ImRaii.Tooltip();
+			ImGui.Text(this._ctx.Locale.Translate("workspace.create_light"));
+		}
 		ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
+
 
 		if (Buttons.IconButtonTooltip(FontAwesomeIcon.CommentDots, this._ctx.Locale.Translate("workspace.create_overlay")))
-			this._ctx.Scene.Factory.BuildOverlay(OverlayTypes.Talk).Add();
-		if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
 			this.Interface.OpenOverlayCreateMenu();
 		ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
 
@@ -175,10 +178,9 @@ public class WorkspaceWindow : KtisisWindow {
 		if (!this._ctx.ShowWorldObjects) return;
 
 		ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
-		ImGui.Text("Range:");
+		ImGui.Text(this._ctx.Locale.Translate("workspace.overlay.range"));
 		ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
 		ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
 		ImGui.SliderFloat("##RangeSlider", ref this._ctx.Config.Overlay.WorldCameraRange, 5.0f, 100.0f, "%.2fy");
 	}
-	
 }

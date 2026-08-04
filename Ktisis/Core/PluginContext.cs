@@ -82,7 +82,8 @@ public class PluginContext : IPluginContext {
 	}
 
 	private void Setup() {
-		this.Config.Load();
+		if (!this.Config._isLoaded)
+			this.Config.Load();
 		this.Gui.AddSettings();
 		this._dll.Create();
 		this.Actions.RegisterActions(this);
@@ -93,6 +94,7 @@ public class PluginContext : IPluginContext {
 
 	private void SetupLegacy() {
 		this._legacy.Setup();
+		this._cmd.RegisterLegacy();
 		this._legacy.OnConfirmed += this.Setup;
 	}
 }

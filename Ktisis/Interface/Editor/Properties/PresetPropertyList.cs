@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -40,6 +41,20 @@ public class PresetPropertyList(IEditorContext ctx, LocaleManager locale) : Obje
 			ImGui.NextColumn();
 		}
 
+		if (ImGui.GetColumnIndex() == 1) {
+			ImGui.NextColumn();
+		}
+
+		if (ImGui.Button(locale.Translate("preset_edit.toggle_other"))) {
+			actor.ToggleOtherPreset(true);
+		}
+		
+		ImGui.NextColumn();
+		
+		if (ImGui.Button(locale.Translate("preset_edit.clear"))) {
+			actor.ClearVisibility();
+		}
+
 		ImGui.Columns();
 		
 		Separators.SeparatorText(locale.Translate("preset_edit.add.title"), textColor:ImGui.GetColorU32(ImGuiCol.Header));
@@ -49,6 +64,10 @@ public class PresetPropertyList(IEditorContext ctx, LocaleManager locale) : Obje
 		if (isValid && ImGui.IsKeyPressed(ImGuiKey.Enter) && ImGui.IsItemDeactivated()) {
 			SavePreset(actor);
 		}
+
+		ImGui.Spacing();
+		using (ImRaii.Disabled())
+			ImGui.Text(Ktisis.Locale.Translate("preset_edit.add.explain"));
 
 		using (var _ = ImRaii.Disabled(!isValid)) {
 			if (ImGui.Button(locale.Translate("preset_edit.add.save"))) {

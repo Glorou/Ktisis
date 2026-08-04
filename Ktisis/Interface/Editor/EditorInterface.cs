@@ -62,14 +62,16 @@ public class EditorInterface : IEditorInterface {
 		).Open();
 	}
 
-	private void OnSelectChanged(ISelectManager sender) {
+	private void OnSelectChanged(ISelectManager sender, bool multi) {
 		if (!this._ctx.Config.Editor.ToggleEditorOnSelect ) return;
 
 		var open = sender.Count > 0;
-		
+
 		var editor = this._gui.Get<ObjectWindow>();
 		if (editor == null) {
-			if (open) this.OpenObjectEditor();
+			// open Object Editor if >=1 object is still selected
+			// DON'T do this if we're in toolbar mode and more than one object was modified in the action (e.g. clear, multiselect) or if it was ModeMulti with 1 selection
+			if (open && !(this._ctx.Config.Editor.UseToolbar && multi)) this.OpenObjectEditor();
 			return;
 		}
 
@@ -214,6 +216,7 @@ public class EditorInterface : IEditorInterface {
 	public void RefreshSceneEntities() {
 		this._ctx.Scene.GetModule<ActorModule>().RefreshGPoseActors();
 		this._ctx.Scene.GetModule<LightModule>().RefreshLightEntities();
+		this._ctx.Scene.World.Refresh();
 	}
 
 	public void SelectAllEntities() {
@@ -235,7 +238,6 @@ public class EditorInterface : IEditorInterface {
 			var opened = this.OpenEditor<ActorWindow, ActorEntity>(actor);
 			if (
 				opened
-				&& !this._ctx.Config.Editor.UseLegacyWindowBehavior
 				&& this._ctx.Selection.Count > 0
 				&& !this._ctx.Selection.IsActorSelected(actor)
 			)

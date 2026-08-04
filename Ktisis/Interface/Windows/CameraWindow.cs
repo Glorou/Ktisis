@@ -1,21 +1,32 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Style;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 
+using GLib.Popups;
 using GLib.Widgets;
 
 using Ktisis.Common.Extensions;
 using Ktisis.Common.Utility;
+using Ktisis.Data.Config.Sections;
 using Ktisis.Editor.Camera.Types;
 using Ktisis.Editor.Context;
 using Ktisis.Editor.Context.Types;
 using Ktisis.Interface.Components.Objects;
 using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
+using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Interface.Windows;
 
@@ -26,6 +37,10 @@ public class CameraWindow : KtisisWindow {
 	private readonly TransformTable _relativePos;
 	private bool IsWork = false;
 	private float _toolbar = 0f;
+	private readonly PopupList<BoneNode> _boneList;
+	private BoneNode? _selected;
+	private BoneNode? _previouslyDrawn;
+	private List<BoneNode> tracked;
 	
 	public CameraWindow(
 		IEditorContext ctx,
@@ -37,7 +52,9 @@ public class CameraWindow : KtisisWindow {
 		this._ctx = ctx;
 		this._fixedPos = fixedPos;
 		this._relativePos = relativePos;
-		this._toolbar = this._ctx.Config.Editor.UseToolbar? 0.1f : 0;
+		this._toolbar = this._ctx.Config.Editor.UseToolbar? 3f : 0;
+		this._boneList = new PopupList<BoneNode>("##BoneList", this.DrawBoneSelect)
+			.WithSearch(BoneSearchPredicate);
 	}
 
 	private const TransformTableFlags TransformFlags = TransformTableFlags.Default | TransformTableFlags.UseAvailable;
@@ -74,11 +91,17 @@ public class CameraWindow : KtisisWindow {
 			ImGui.Spacing();
 
 			this.DrawOrbitTarget(camera);
+
 			ImGui.Spacing();
-			this.DrawFixedPosition(camera);
+			if (!camera.IsTracking)
+				this.DrawFixedPosition(camera);
+			else
+				this.DrawTracking(camera);
 			this.DrawRelativeOffset(camera);
+
 			ImGui.Spacing();
 			this.DrawAnglePan(camera);
+			ImGui.Spacing();
 		}
 
 		ImGui.Spacing();
@@ -117,9 +140,9 @@ public class CameraWindow : KtisisWindow {
 
 	private unsafe void DrawOrbitTarget(EditorCamera camera) {
 		using var _ = ImRaii.PushId("CameraOrbitTarget");
-		
+
 		var target = this._ctx.Cameras.ResolveOrbitTarget(camera);
-		if (target == null) return;
+		using var disable = ImRaii.Disabled(target == null);
 
 		var isFixed = camera.OrbitTarget != null;
 		var lockIcon = isFixed ? FontAwesomeIcon.Lock : FontAwesomeIcon.Unlock;
@@ -127,23 +150,63 @@ public class CameraWindow : KtisisWindow {
 			? this._ctx.Locale.Translate("camera_edit.orbit.unlock")
 			: this._ctx.Locale.Translate("camera_edit.orbit.lock");
 		if (Buttons.IconButtonTooltip(lockIcon, lockHint))
-			camera.OrbitTarget = isFixed ? null : target.ObjectIndex;
+			camera.OrbitTarget = isFixed ? null : target?.ObjectIndex;
 
 		ImGui.SameLine();
 
-		var text = $"Orbiting: {target.GetNameOrFallback(this._ctx)}";
-		if (isFixed)
-			ImGui.Text(text);
-		else
-			ImGui.TextDisabled(text);
-		
-		ImGui.SameLine(0, 0);
-		ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - (Buttons.CalcSize()) - this._toolbar); //fuckin good enough
-		if (Buttons.IconButtonTooltip(FontAwesomeIcon.Sync, this._ctx.Locale.Translate("camera_edit.offset.to_target"))) {
-			var gameObject = (GameObject*)target.Address;
-			var drawObject = gameObject->DrawObject;
-			if (drawObject != null)
-				camera.RelativeOffset = drawObject->Object.Position -  gameObject->Position;
+		if (Buttons.IconButtonTooltip(FontAwesomeIcon.ArrowsToCircle, $"Turn camera tracking {(camera.IsTracking ? "off" : "on")}", iconColor: camera.IsTracking ? *ImGui.GetStyleColorVec4(ImGuiCol.TabActive) : *ImGui.GetStyleColorVec4(ImGuiCol.Text))) {
+			camera.IsTracking = !camera.IsTracking;
+		}
+
+		ImGui.SameLine();
+
+		if (!camera.IsTracking) {
+			var text = $"Orbiting: {target?.GetNameOrFallback(this._ctx)}";
+			if (isFixed)
+				ImGui.Text(text);
+			else
+				ImGui.TextDisabled(text);
+
+			ImGui.SameLine(0, 0);
+			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - (Buttons.CalcSize()) - this._toolbar); // fuckin good enough
+			if (Buttons.IconButtonTooltip(FontAwesomeIcon.Sync, this._ctx.Locale.Translate("camera_edit.offset.to_target"))) {
+				var gameObject = (GameObject*)target?.Address;
+				var drawObject = gameObject->DrawObject;
+				if (drawObject != null)
+					camera.RelativeOffset = drawObject->Object.Position - gameObject->Position;
+			}
+		} else {
+			ImGui.Text($"Tracking mode: {camera.Tracking}");
+			ImGui.SameLine(0, 0);
+			ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - (Buttons.CalcSize()) - this._toolbar);
+
+			string button;
+			TrackingMode next;
+			switch (camera.Tracking) {			//replace with FontAwesome chars once in Dalamud
+				case TrackingMode.Follow:
+					button = "2";
+					next = TrackingMode.Pan;
+					break;
+				case TrackingMode.FollowAndPan:
+					button = "0";
+					next = TrackingMode.None;
+					break;
+				case TrackingMode.Pan:
+					button = "3";
+					next = TrackingMode.FollowAndPan;
+					break;
+				case TrackingMode.None:
+					button = "1";
+					next = TrackingMode.Follow;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+			if (ImGui.Button(button, Vector2.Create(Buttons.CalcSize())))
+				camera.Tracking = next;
+			if (ImGui.IsItemHovered())
+				using (ImRaii.Tooltip())
+					ImGui.Text(next.ToString());
 		}
 	}
 	
@@ -211,7 +274,89 @@ public class CameraWindow : KtisisWindow {
 			ptr->Pan = panDeg * MathHelpers.Deg2Rad;
 		}
 	}
+
+	private void DrawTracking(EditorCamera camera) {
+		this.tracked = camera.Target;
+		var target = this._ctx.Cameras.ResolveOrbitTarget(camera);
+		using var disable = ImRaii.Disabled(target == null); // disable this section too if we enter a bad orbit-target state
+
+		this._previouslyDrawn = null;
+		if (Buttons.IconButtonTooltip(FontAwesomeIcon.Plus, this._ctx.Locale.Translate("camera_edit.tracking.info"))) {
+			if (!ImGui.IsKeyDown(ImGuiKey.ModShift))
+				this._boneList.Open();
+			else
+				camera.Target.Clear();
+		}
+		ImGui.SameLine();
+
+		using (ImRaii.Disabled(!this._ctx.Selection.GetSelected().Any(e => e.Type is EntityType.BoneNode))) {
+			if (Buttons.IconButton(FontAwesomeIcon.Repeat)) {
+				camera.Target.Clear();
+				foreach (var sceneEntity in this._ctx.Selection.GetSelected().Where(e => e.Type is EntityType.BoneNode)) {
+					var bone = (BoneNode)sceneEntity;
+					camera.Target.Add(bone);
+				}
+			}
+		}
+		if (ImGui.IsItemHovered())
+			using (ImRaii.Tooltip())
+				ImGui.Text(this._ctx.Locale.Translate("camera_edit.tracking.track"));
+
+		if (this._boneList.IsOpen) {
+			var list = new List<BoneNode>();
+
+			foreach (var e in this._ctx.Scene.Children) {
+				list.AddRange(e.Recurse().OfType<BoneNode>().Where(e => e.Type is EntityType.BoneNode));
+			}
+			this._boneList.Draw(list, out this._selected);
+		}
+		if (this._selected != null) {
+			if (!camera.Target.Remove(this._selected))
+				camera.Target.Add(this._selected);
+			this._selected = null;
+		}
+
+		ImGui.SameLine();
+		ImGui.Text(this._ctx.Locale.Translate("camera_edit.tracking.current"));
+		if (camera.Target.Count == 0) {
+			ImGui.SameLine();
+			ImGui.Text("N/A");
+		}
+		else if (camera.Target.Count == 1) {
+			ImGui.SameLine();
+			ImGui.Text($"{camera.Target[0].Name} on {camera.Target[0].Root.Name}");
+		} else {
+			ImGui.SameLine();
+			ImGui.Text(this._ctx.Locale.Translate("camera_edit.tracking.multi"));
+			if (ImGui.IsItemHovered())
+				using (ImRaii.Tooltip()) {
+					var groups = camera.Target.GroupBy(t => t.Root.Name);
+					foreach (var g in groups) {
+						Separators.SeparatorText(g.Key, textPosition:.5f);
+						foreach (var node in g) {
+							ImGui.Text(node.Name);
+						}
+					}
+				}
+		}
+
+	}
 	
+	private static bool BoneSearchPredicate(BoneNode bone, string query)
+		=> bone.Name.Contains(query, StringComparison.InvariantCultureIgnoreCase);
+		
+	
+	private bool DrawBoneSelect(BoneNode bone, bool isFocus) {
+		if (this._previouslyDrawn?.Root.Name != bone.Root.Name) {
+			Separators.SeparatorText(bone.Root?.Name);
+			Separators.SeparatorText(bone.Parent?.Name, textPosition: 0.5f, height:Separators.LineHeight.Middle);
+		}else if (this._previouslyDrawn?.Parent?.Name != bone.Parent?.Name) {
+			Separators.SeparatorText(bone.Parent?.Name, textPosition: 0.5f, height:Separators.LineHeight.Middle);
+		}
+		this._previouslyDrawn = bone;
+		var result = ImGui.Selectable($"{bone.Name}", this.tracked.Contains(bone));
+		return result;
+	}
 	// Sliders
 
 	private unsafe void DrawSliders(EditorCamera camera) {

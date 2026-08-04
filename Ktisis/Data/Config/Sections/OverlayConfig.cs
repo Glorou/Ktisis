@@ -10,6 +10,11 @@ public class OverlayConfig {
 	public bool DrawLinesGizmo = true;
 	public bool DrawDotsGizmo = true;
 
+	public bool DimOverlayForInactiveActors = false;
+	public bool PresetsOnActiveActor = false;
+	public ActiveState ActiveStateType = ActiveState.Target;
+	public float InactiveOpacity = 0.5f;
+
 	public float DotRadius = 7.0f;
 	public float LineThickness = 2.0f;
 	public float LineOpacity = 0.95f;
@@ -17,10 +22,18 @@ public class OverlayConfig {
 
 	public bool DrawReferenceTitle = true;
 
-	public float WorldNodeRadius = 5.0f;
+	public float WorldNodeRadius = 7.0f;
 	public float WorldNodeOutlineWidth = 1.0f;
-	public float WorldNodeScaleFactor = 1.0f;
+	public float WorldNodeScaleFactor = 0.6f;
 	public uint WorldNodeColor = 0xFFFFFFFF;
+	public uint ActorNodeColor = 0xFFFF006D;
+	public uint LightNodeColor = 0xFF00DEFF;
 	public OutlineChoice WorldOutlineColor = OutlineChoice.Yellow;
 	public float WorldCameraRange = 30.0f;
+}
+
+public enum ActiveState {
+	Target,
+	Selection,
+	Both
 }

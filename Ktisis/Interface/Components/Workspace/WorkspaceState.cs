@@ -29,9 +29,11 @@ public class WorkspaceState {
 	public void Draw() {
 		var style = ImGui.GetStyle();
 		var height = (ImGui.GetFontSize() + style.ItemInnerSpacing.Y) * 2 + style.ItemSpacing.Y;
+		var width = ImGui.GetContentRegionAvail().X - 6;
 		
+		ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 3);
 		var id = ImGui.GetID("SceneState_Frame");
-		using (ImRaii.ChildFrame(id, new Vector2(-1, height)))
+		using (ImRaii.ChildFrame(id, new Vector2(width, height)))
 		{
 			this.DrawContext();
 			this.DrawShowAll();
@@ -42,9 +44,10 @@ public class WorkspaceState {
 	internal void DrawCompact() {
 		var style = ImGui.GetStyle();
 		var height = (ImGui.GetFontSize() + style.ItemInnerSpacing.Y) * 2 + style.ItemSpacing.Y;
-
+		var width = ImGui.GetContentRegionAvail().X - 5;
+		
 		var id = ImGui.GetID("SceneState_Frame");
-		using (ImRaii.ChildFrame(id, new Vector2(-1, height))) {
+		using (ImRaii.ChildFrame(id, new Vector2(width, height))) {
 
 			var cursorY = ImGui.GetCursorPosY();
 			var avail = ImGui.GetContentRegionAvail().Y;
@@ -155,12 +158,12 @@ public class WorkspaceState {
 			}
 		));
 
-		var targets = transform.Target!.Targets.Where(tar => tar.Name != name).ToList();
+		var targets = transform.Target!.Targets.Except([target.Primary!]).ToList();
 		if (ImGui.IsItemHovered()) {
 			using var _ = ImRaii.Tooltip();
 
-			for (int i = 0; i < count; i++)
-				ImGui.Text($"{targets[i].Name}");
+			foreach (var t in targets)
+				ImGui.Text(t.Name);
 		}
 	}
 

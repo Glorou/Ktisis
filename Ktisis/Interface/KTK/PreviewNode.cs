@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -10,16 +8,13 @@ using Dalamud.Plugin.Services;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
-using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.Interop;
 
 using KamiToolKit;
 using KamiToolKit.Classes;
 using KamiToolKit.Enums;
 using KamiToolKit.Nodes;
-using KamiToolKit.Overlay;
 using KamiToolKit.Extensions;
 using KamiToolKit.Overlay.UiOverlay;
 
@@ -27,22 +22,17 @@ using Ktisis.Data.Files;
 using Ktisis.Data.Json;
 using Ktisis.Editor.Context.Types;
 using Ktisis.Editor.Posing.Data;
-using Ktisis.Editor.Posing.Ik;
 using Ktisis.Editor.Posing.Types;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Factory.Builders;
-
-using Lumina.Excel.Sheets;
-
-using Newtonsoft.Json;
-
 
 namespace Ktisis.Interface.KTK;
 
 public unsafe class PreviewNode : OverlayNode {
 	public override OverlayLayer OverlayLayer => OverlayLayer.BehindUserInterface;
 	public override bool HideWithNativeUi => false;
+	public override bool HideWithUiToggled => false;
 	public override bool IsVisible { get; set; } = false;
 	protected override void OnUpdate() { }
 
@@ -92,7 +82,6 @@ public unsafe class PreviewNode : OverlayNode {
 		this._ctx = context;
 		this._serializer = new JsonFileSerializer();
 
-		
 		this._renderTargetManager = RenderTargetManager.Instance();
 		this._agentInspect = AgentInspect.Instance(); // idk why this was below the eval before?
 
@@ -122,76 +111,50 @@ public unsafe class PreviewNode : OverlayNode {
 			Id = 0
 		});
 
-		
-		var part = this.Image.AddPart(new Part { 		
+
+		var part = this.Image.AddPart(new Part {
 			Height = 320,
-			Width = 192,});
-		part->LoadTexture(this._renderTargetManager->CharaViewTextures[5]);
-		this._renderTargetManager->CharaViewTextures[5].Value->IncRef();
-		
-		var bgpart = this.ImageBacking.AddPart(new Part { 		
+			Width = 192,
+		});
+		part->LoadTexture(this._renderTargetManager->CharaViewTextures[1]);
+		this._renderTargetManager->CharaViewTextures[1].Value->IncRef();
+
+		var bgpart = this.ImageBacking.AddPart(new Part {
 			Height = 320,
-			Width = 192,});
+			Width = 192,
+		});
 		bgpart->LoadTexture("ui/common/characterbg_hr1.tex");
-		
+
 
 		this._framework.RunOnFrameworkThread(() => {
-			this._agentInspect->CharaView.Initialize(&this._agentInspect->AgentInterface, 5, 0);
+			this._agentInspect->CharaView.Initialize(&this._agentInspect->AgentInterface, 1, 0);
 			this._agentInspect->CharaView.ModelData.CopyFromCharacter((Character*)target.Actor.Address);
 		});
 
 		this.Buttons = this.SetupButtons();
-		
-		this._actor = new ActorEntity(this._ctx.Scene, new PoseBuilder(this._ctx.Scene), this._objectTable[445]);
+
+		this._actor = new ActorEntity(this._ctx.Scene, new PoseBuilder(this._ctx.Scene), this._objectTable[441]);
 		this._actor.Setup();
 		this._framework.Update += this.OnFramework;
-		
+
 		this.ImageBacking.AttachNode(this);
 		this.Image.AttachNode(this);
 		this.Border.AttachNode(this);
 		this.Buttons.AttachNode(this);
-		
+
 		this._agentInspect->CharaView.Update(this._counter, this._agentInspect->CharaView.GetCharacter());
 	}
 
-	private unsafe void CopyTargetAppearance() {
-		var targetActor = this._target.GetHuman();
-		var previewGameObj = (Character*) this._actor.CsGameObject;
-
-		if (targetActor->EquipmentModels != previewGameObj->DrawData.EquipmentModelIds) {
-			foreach (var modelId in previewGameObj->DrawData.EquipmentModelIds) {
-				if (!targetActor->EquipmentModels.Contains(modelId)) {
-					var index = previewGameObj->DrawData.EquipmentModelIds.IndexOf(modelId);
-					previewGameObj->DrawData.EquipmentModelIds[index] = targetActor->EquipmentModels[index];
-					previewGameObj->DrawData.LoadEquipment((DrawDataContainer.EquipmentSlot)index, previewGameObj->DrawData.EquipmentModelIds.GetPointer(index), true);
-				}
-			}
-		}
-		
-		targetActor->EquipmentModels.CopyTo(previewGameObj->DrawData.EquipmentModelIds);
-		targetActor->Customize.Data.CopyTo(previewGameObj->DrawData.CustomizeData.Data);
-		previewGameObj->DrawData.CustomizeData.Normalize(&previewGameObj->DrawData.CustomizeData);
-	}
-	
-	
 	/// <summary>
 	/// Framework update for our preview window, required to work 
 	/// </summary>
 	private void OnFramework(IFramework framework) {
-
-		if (this._counter < 5) {
-			this._counter++;
-			if (this._objectTable[445]?.Address != null) {
-				var ipc = this._ctx.Plugin.Ipc.GetPenumbraIpc();
-				var collection = ipc.GetCollectionForObject(this._target.Actor);
-				ipc.SetCollectionForObject(this._actor.Actor, collection.Id);
-			}
-			return;
-		}
-		
-		if(this._actor.GetHuman() != null){
-			this.CopyTargetAppearance();
-		}
+		/*if (this.needsToApplyCollection && this._objectTable[441]?.Address != null) {
+			var ipc = this._ctx.Plugin.Ipc.GetPenumbraIpc();
+			var collection = ipc.GetCollectionForObject(this._target.Actor);
+			ipc.SetCollectionForObject(this._objectTable[441], collection.Id);
+			this.needsToApplyCollection = false;
+		}*/
 
 		this._agentInspect->CharaView.Update(this._counter, this._actor.Character);
 		this._agentInspect->CharaView.Render(this._counter++);
@@ -210,15 +173,14 @@ public unsafe class PreviewNode : OverlayNode {
 			if (this._ctx.Config.File.ImportPoseSelectedBones)
 				this.CopySelectedBones();
 
-			if(!this._actor.Pose.HasDTFace())
+			if (!this._actor.Pose.HasDTFace())
 				this._actor.Pose.Update();
-			
+
 			this.ApplyPose();
 			this.UpdateLocals();
 		}
 	}
 
-	// Nodes and helpers
 	private NodeBase SetupButtons() {
 		NodeBase buttonsNode = new ResNode() {
 			Size = new Vector2(168.0f, 32.0f),
@@ -270,9 +232,7 @@ public unsafe class PreviewNode : OverlayNode {
 			Position = new Vector2(148f, 0f),
 			Size = new Vector2(32.0f, 32.0f),
 		};
-		buttonReset.OnClick = () => {
-			this.ResetCamera();
-		};
+		buttonReset.OnClick = this.ResetCamera;
 
 		buttonLeft.AttachNode(buttonsNode);
 		buttonRight.AttachNode(buttonsNode);
@@ -301,27 +261,27 @@ public unsafe class PreviewNode : OverlayNode {
 		if (Path.GetExtension(path).Equals(".cmp")) content = LegacyPoseHelpers.ConvertLegacyPose(content);
 		this._currentPose = this._serializer.Deserialize<PoseFile>(content);
 
-		
+
 		this._ctx.Posing.ApplyReferencePose(_actor.Pose);
 		if (this._ctx.Config.File.ImportPoseSelectedBones)
 			this.CopySelectedBones();
 
-		if(!this._actor.Pose.HasDTFace())
+		if (!this._actor.Pose.HasDTFace())
 			this._actor.Pose.Update();
-		
+
 		this.ApplyPose();
 		this.UpdateLocals();
 	}
-	
+
 	private void ApplyPose() => this._ctx.Posing.ApplyPoseFile(_actor.Pose,
 		this._currentPose,
 		transforms: this._ctx.Config.File.ImportPoseTransforms,
-		modes: this._ctx.Config.File.ImportPoseModes == PoseMode.All ? PoseMode.BodyFace : this._ctx.Config.File.ImportPoseModes ,
+		modes: PoseMode.Body,
 		anchorGroups: this._ctx.Config.File.AnchorPoseSelectedBones,
-		selectedBones: (this._target.Pose.Recurse().Any((b)=> { return b.IsSelected;})? this._ctx.Config.File.ImportPoseSelectedBones : false),
+		selectedBones: (this._target.Pose.Recurse().Any(b => b.IsSelected) ? this._ctx.Config.File.ImportPoseSelectedBones : false),
 		includeDescendants: this._ctx.Config.File.SelectedBonesIncludeDescendants,
 		excludeEars: this._ctx.Config.File.ExcludePoseEarBones
-		);
+	);
 
 	private void UpdateLocals() {
 		this._currentAnchor = this._ctx.Config.File.AnchorPoseSelectedBones;
@@ -348,14 +308,14 @@ public unsafe class PreviewNode : OverlayNode {
 			.Prepend(this._target)
 			.Where(entity => entity is SkeletonNode { IsSelected: true })
 			.Cast<SkeletonNode>();
-		var selectedBones =  this.GetBoneSelectionFrom(selected, true).Distinct();
+		var selectedBones = this.GetBoneSelectionFrom(selected, true).Distinct();
 		if (this._ctx.Config.File.SelectedBonesIncludeDescendants)
 			selectedBones = this._target.Pose.ExpandToDescendants(selectedBones);
-		
+
 		//copy selected bones
 		foreach (var bone in selectedBones) {
 			var node = this._actor.Pose.FindBoneByName(bone.Name);
-			if(node != null)
+			if (node != null)
 				node.Select();
 		}
 
@@ -375,8 +335,7 @@ public unsafe class PreviewNode : OverlayNode {
 			}
 		}
 	}
-	
-	
+
 	private bool NeedsUpdate() => this._currentAnchor != this._ctx.Config.File.AnchorPoseSelectedBones ||
 		this._currentBones != this._ctx.Config.File.ImportPoseSelectedBones ||
 		this._currentAnchor != this._ctx.Config.File.AnchorPoseSelectedBones ||

@@ -15,9 +15,12 @@ public class EditorConfig {
 	public bool UseToolbar = false;
 	public bool OpenTrayOnWorkspaceClose = true;
 	public bool ShowHints = true;
+	public HintLoc HintLocation = HintLoc.TopLeft;
 	
 	public bool ToggleEditorOnSelect = true;
 	public bool CloseEditorOnDeselect = false;
+	public bool SelectOnTarget = false;
+	public bool PersistentSiblingLink = false;
 
 	public bool IncognitoPlayerNames = false;
 
@@ -53,6 +56,8 @@ public class EditorConfig {
 	// Object Editor
 
 	public bool AutoResizeObjectEditor = false;
+	public bool CombineExpressions = true;
+	public bool LinkExpressions = false;
 	
 	// Pose View
 
@@ -62,4 +67,11 @@ public class EditorConfig {
 
 	public EntityDisplay GetDisplayForType(EntityType type)
 		=> this.Display.GetValueOrDefault(type, new EntityDisplay());
+}
+
+public enum HintLoc {
+	TopLeft,
+	TopRight,
+	BottomLeft,
+	BottomRight
 }

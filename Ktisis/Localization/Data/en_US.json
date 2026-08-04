@@ -43,7 +43,9 @@
 		"Toolbar_ToggleEnv": "Switch to the Environment Editor",
 		"Toolbar_ToggleCamera": "Switch to the Camera Editor",
 		"Toolbar_ToggleConfig": "Switch to the Configuration Window",
-		"Scene_RefreshEntities": "Refresh scene entities"
+		"Toolbar_ToggleScene": "Switch to the Scene Editor",
+		"Scene_RefreshEntities": "Refresh scene entities",
+		"Toggle_Siblink_Select": "Toggle persistent Sibling Links"
 	},
 	
 	"actors": {
@@ -108,6 +110,7 @@
 		},
 		"pose": {
 			"name": "Pose File (.pose)",
+			"apply": "Apply on selection",
 			"ctx_import": "Import pose...",
 			"ctx_import.group": "Import group...",
 			"ctx_import.select": "Import selected...",
@@ -161,7 +164,9 @@
 		},
 		"scene_tree": {
 			"attached_to": "Attached to",
-			"reset_tooltip": "Click to reset attachment\nClick+Drag to set new attachment"
+			"reset_tooltip": "Click to reset attachment\nClick+Drag to set new attachment",
+			"bulkVisWarning": "Show All Bones enabled!",
+			"bulkVisExplain": "While turned on, individual bones' visibility settings are ignored."
 		},
 		"create_menu": {
 			"actor": {
@@ -178,7 +183,13 @@
 				"directional": "Sun (Directional)",
 				"file": "From file... (.ktlight)"
 			},
-			"reference": "Add reference image"
+			"reference": "Add reference image",
+			"overlay": {
+				"create": "Add new overlay...",
+				"dialog": "Dialog",
+				"balloon": "Balloon",
+				"status": "Status"
+			}
 		},
 		"entity_menu": {
 			"base": {
@@ -190,7 +201,9 @@
 				"detach": "Detach",
 				"rename": "Rename",
 				"duplicate": "Duplicate",
-				"delete": "Delete"
+				"delete": "Delete",
+				"untrack": "Untrack",
+				"reset": "Reset"
 			},
 			"actor": {
 				"target": "Target",
@@ -214,7 +227,8 @@
 				"customize": {
 					"profile": "Customize: Assign profile"
 				},
-				"revert": "Revert all IPC data"
+				"revert": "Revert all IPC data",
+				"refresh": "Refresh all IPC lists"
 			},
 			"pose": {
 				"import": "Import pose",
@@ -228,14 +242,15 @@
 			}
 		},
 		"create": "Create new...",
-		"create_actor": "Create Actor\nRight-click for options...",
-		"create_light": "Create Light\nRight-click for options...",
-		"create_overlay": "Create Overlay\nRight-click for options...",
+		"create_actor": "Create Actor\nDrop-down for options...",
+		"create_light": "Create Light\nDrop-down for options...",
+		"create_overlay": "Create Overlay",
 		"refresh_entities": "Refresh scene entities",
 		"edit_mode.hint": "Select editing mode",
 		"overlay.hide": "Hide Ktisis overlay",
 		"overlay.show": "Show Ktisis overlay",
-		"overlay.world_toggle": "Toggle world object overlay"
+		"overlay.world_toggle": "Toggle world object overlay",
+		"overlay.range": "Range:"
 	},
 
 	"toolbar": {
@@ -278,9 +293,8 @@
 			"reflect": "Gizmo Mode: Mirror Transform"
 		},
 		"sibling": {
-			"available": "Multi-select sibling bone: %bone%",
-			"unavailable": "Bone %bone% has no sibling",
-			"multiple": "Multi-select sibling bone: %bone%\nCan only select sibling when 1 bone is selected!"
+			"linkDisable": "Disable Sibling Links",
+			"linkEnable": "Enable Sibling Links\nWhen a L/R bone is selected, its sibling will be automatically multi-selected."
 		},
 		"gizmo": {
 			"show": "Show rotation gizmo",
@@ -289,6 +303,7 @@
 		"transforms": {
 			"title": "Bone Transforms",
 			"parenting": "Enable bone parenting",
+			"parentingDisable": "Disable bone parenting",
 			"relative": "Relative rotation"
 		},
 		"ik": {
@@ -327,8 +342,11 @@
 			"title": "Add new preset",
 			"label": "Preset Name",
 			"save": "Save",
-			"cancel": "Cancel"
-		}
+			"cancel": "Cancel",
+			"explain": "The new Preset will contain all visible bones on the actor."
+		},
+		"clear": "Clear",
+		"toggle_other": "Toggle other"
 	},
 	
 	"chara_edit": {
@@ -409,7 +427,8 @@
 				"adv": "Advanced (Gaze/IK)",
 				"import": "Import actor appearance",
 				"gaze": "Gaze Control",
-				"ik": "Inverse Kinematics"
+				"ik": "Inverse Kinematics",
+				"expressions": "Expressions"
 			},
 			"gaze": {
 				"linked": "Linked",
@@ -419,7 +438,14 @@
 				"target": "Select target actor",
 				"targeting": "Targeting:",
 				"unk": "Unknown",
-				"null": "No Target"
+				"null": "No Target",
+				"disabled": "Unable to control gaze while pose mode active"
+			},
+			"expressions": {
+				"combine": "Combine L/R Sliders",
+				"link": "Link L/R Sliders",
+				"posemode_warn": "Pose Mode must be enabled to use Expression Sliders!",
+				"dtface_warn": "Expression Sliders are unavailable for non-Dawntrail faces!"
 			},
 			"chara_edit": "Actor Editor",
 			"export": "Export Chara"
@@ -462,7 +488,13 @@
 				"area.angle": "Light Angle",
 				"area.falloff": "Falloff Angle",
 				"falloff.type": "Falloff Type",
-				"falloff.power": "Falloff Power"
+				"falloff.power": "Falloff Power",
+				"gobos": {
+					"info": "For Spot and Area Lights, a vanilla texture can now be applied.\nThis acts as a gobo, blocking or coloring some of the light source as if projected through the image.",
+					"choose": "Choose a texture for this light to project",
+					"remove": "\nRight-click to remove",
+					"current": "Current Texture:"
+				}
 			},
 			"shadow": {
 				"dynamic": "Dynamic shadows",
@@ -478,6 +510,36 @@
 			"visible": "Enabled",
 			"load": "Load image",
 			"opacity": "Opacity"
+		},
+		"overlay": {
+			"header": "Overlay",
+			"pos": "Position",
+			"pos_drag": "Draggable",
+			"pos_snap": "Snap to center",
+			"scale": "Scale",
+			"scale_reset": "Reset scale",
+			"alpha": "Opacity",
+			"talk": {
+				"speaker": "Speaker",
+				"content": "Dialog",
+				"fontsize": "Dialog Font Size",
+				"bg": "Background",
+				"cursor": "Cursor"
+			},
+			"balloon": {
+				"content": "Dialog",
+				"fontsize": "Font Size",
+				"bg": "Background",
+				"gradient": "Color Gradient",
+				"arrow_show": "Show Bubble Arrow",
+				"arrow_pos": "Arrow Position"
+			},
+			"status": {
+				"content": "Status Text",
+				"type": "Type",
+				"tex": "Texture:",
+				"tex_hint": "Choose an icon for this status"
+			}
 		}
 	},
 	
@@ -507,7 +569,13 @@
 			"from_base": "Offset from base position"
 		},
 		"pan": "Camera pan",
-		"angle": "Camera orbit angle"
+		"angle": "Camera orbit angle",
+		"tracking": {
+			"info": "Add bone to track\nHold shift to clear tracked bones",
+			"track": "Track selected bones",
+			"current": "Bones tracked:",
+			"multi": "Multiple..."
+		}
 	},
 	
 	"env_edit": {
@@ -614,6 +682,7 @@
 		"title": "Import Pose",
 		"header": "Importing pose for",
 		"apply": "Apply",
+		"posemode_warn": "Pose Mode must be enabled to load poses!",
 		"transforms.header": "Transforms:",
 		"modes": {
 			"header": "Modes:",
@@ -715,8 +784,15 @@
 				"dot_radius": "World node radius",
 				"dot_thickness": "World node outline thickness",
 				"scale_factor": "World node scale factor",
-				"color": "World node fill color"
-			}
+				"color": "World node fill color",
+				"color_actor": "Actor node fill color",
+				"color_light": "Light node fill color",
+				"highlight_color": "Highlight color when hovering"
+			},
+			"keep_presets_on_active": "Keep Presets enabled when active actor changes",
+			"dim_inactive": "Dim bones on inactive actors",
+			"active_state_chooser": "Active state for actors",
+			"inactive_opacity": "Opacity while inactive"
 		},
 		"references": {
 			"draw_title": "Draw title for reference images"
@@ -728,7 +804,7 @@
 			"toggleOpenWindows": "UI buttons toggle windows open & closed",
 			"toolbar": "Use Ktisis Toolbar",
 			"hintToolbar": "Experimental: This is an alternate UI which puts all of Ktisis' editors into one window.\nPlease provide any feedback, as this option is actively under development!",
-			"editOnSelect": "Open object editor when selecting from the workspace",
+			"editOnSelect": "Open object editor on selection",
 			"closeOnDeselect": "Close object editor when nothing is selected",
 			"incognitoPlayerNames": "Incognito Mode",
 			"hintIncognito": "Censors all player names from actor list and GPose window",
@@ -747,6 +823,8 @@
 			"hintTrayIcon": "The widget is movable when you click and drag, and will reopen the workspace when clicked",
 			"showHints": "Display Ktisis Tips on Startup",
 			"hintHint": "The first time you enter GPose after launching Ktisis, an overlay will display a random tip, hint, or fun fact!",
+			"selectTarget": "Automatically Select actors when Targeted",
+			"hintSelectTarget": "An actor is Targeted when clicked or tabbed-to with vanilla GPose controls.\nThis toggle will override Ktisis' current Selection to your new Target when one is chosen.",
 			"workcam": {
 				"speed": "Work camera speed",
 				"fastMulti": "Work camera fast-multiplier",
@@ -768,6 +846,13 @@
 			"defaultLocation": {
 				"remove": "Unset this folder as default",
 				"add": "Set this folder as default place to open when using the file browser"
+			},
+			"hintLocation": {
+				"label": "On-Screen Location:",
+				"TopLeft": "Top Left",
+				"TopRight": "Top Right",
+				"BottomLeft": "Bottom Left",
+				"BottomRight": "Bottom Right"
 			}
 		},
 		"input": {
@@ -809,7 +894,9 @@
 			"defaults": "Right click any preset to mark it as Default. Default presets will be initially enabled for any GPose actors.",
 			"delete_tooltip": "Hold shift to delete",
 			"delete": "Delete",
-			"rename": "Rename"
+			"rename": "Rename",
+			"regen": "Regenerate Defaults",
+			"regen_tooltip": "Force generates Ktisis' default presets (Body, Arms, etc.)\nHold Ctrl+Shift to use"
 		},
 		"poseview": {
 			"title": "Pose View",
@@ -887,25 +974,30 @@
 		}
 	},
 
+	"titlebar": {
+		"help": "Help - Ktisis Docs",
+		"helpLinkout": "https://docs.ktisis.tools/"
+	},
+
 	"migrator": {
-		"title": "Ktisis v0.3 Setup",
+		"title": "Ktisis v0.4 Setup",
 		"mainWindow": {
-			"main_Desc": "Thank you for using Ktisis! v0.3 is now our stable version.\nThis migrator will allow you to transfer your Ktisis Alpha settings, or update your Ktisis Workspace settings.",
+			"main_Desc": "Thank you for using Ktisis! v0.4 is now our stable version.\nThis migrator will allow you to transfer your Ktisis Alpha settings, or update your Ktisis Workspace settings.",
 			"skip": "Skip migration",
-			"skip_desc": "Skip Migrating and start v0.3 with default settings.\nYou will not be able to revisit the migrator. Any old settings will be discarded.",
+			"skip_desc": "Skip Migrating and start v0.4 with default settings.\nYou will not be able to revisit the migrator. Any old settings will be discarded.",
 			"v3": {
 				"from": "I'm coming from v0.3!",
 				"from_desc": "Start Migrating based on your Ktisis Settings from v0.3 (Testing).\nThis will ignore any legacy settings from v0.2 if applicable.",
 				"main_Desc": "A lot has changed since we started developing v0.3, and as we've worked on Ktisis, some features have changed or improved.\nThe following settings have new defaults. You can keep your old configuration if you wish to, or you can use the new recommended values.",
-				"testing": "Now that v0.3 is officially released, we suggest that you disable [Receive Testing Versions] in Dalamud.",
+				"testing": "Now that v0.4 is officially released, we suggest that you disable [Receive Testing Versions] in Dalamud.",
 				"installer": "You can open the Plugin Installer to change this setting for Ktisis here:"
 			},
 			"v2": {
 				"from": "I'm coming from v0.2!",
 				"from_desc": "Start Migrating based on your Ktisis Settings from v0.2 (Alpha).\nThis will overwrite your existing v0.3 settings if applicable.",
-				"main_Desc": "Thank you for using Ktisis! v0.3 is our latest version, and represents over 2 years of work by multiple authors to improve on the Alpha version.\nNearly all of the code from v0.2 has been updated in that time, so we appreciate you for sticking with us. These rewrites have given us a stable foundation for future work.\nBeyond just the new features in v0.2, we have lots of big ideas still to explore, so stay tuned!",
-				"migration_desc": "This updater will take your settings from v0.2 and convert them to v0.3, wherever possible. Please note any tooltips & descriptions for your benefit.\nYou can override them yourself on each page and can change these settings after migration, too.",
-				"wiki": "To learn more about the changes between Ktisis v0.2 and v0.3, visit our Wiki docs here:"
+				"main_Desc": "Thank you for using Ktisis! v0.4 is our latest version, and represents over 2 years of work by multiple authors to improve on the Alpha version.\nNearly all of the code from v0.2 has been updated in that time, so we appreciate you for sticking with us. These rewrites have given us a stable foundation for future work.\nBeyond just the new features in v0.2, we have lots of big ideas still to explore, so stay tuned!",
+				"migration_desc": "This updater will take your settings from v0.2 and convert them to v0.4, wherever possible. Please note any tooltips & descriptions for your benefit.\nYou can override them yourself on each page and can change these settings after migration, too.",
+				"wiki": "To learn more about the changes between Ktisis v0.2 and v0.4, visit our Wiki docs here:"
 			}
 		},
 		"v3": {
@@ -928,7 +1020,7 @@
 			},
 			"input": {
 				"header": "Input settings",
-				"detail": "Your v0.2 keybinds will be migrated to their v0.3 counterparts where possible. You can update these anytime in the Settings > Inputs menus.",
+				"detail": "Your v0.2 keybinds will be migrated to their v0.4 counterparts where possible. You can update these anytime in the Settings > Inputs menus.",
 				"keybinds": "Enable Keybinds",
 				"leftClick": "Disable GPose change target on left click",
 				"rightClick": "Disable GPose change target on right click"
@@ -944,7 +1036,11 @@
 				"lineThickness": "Line thickness",
 				"lineOpacity": "Line opacity",
 				"lineOpacityUsing": "Line opacity using",
-				"dotRadius": "Dot radius"
+				"dotRadius": "Dot radius",
+				"selectTarget": "Select actors when Targeted",
+				"selectTargetTip": "Unlike v0.2, Ktisis v0.3 allows multiple actors to be edited simultaneously, allowing the camera to orbit independently of your selected actor's skeleton. This setting links camera targeting to actor selection for a more familiar muscle memory to v0.2.",
+				"dimInactive": "Dim bones on inactive actors",
+				"dimInactiveTip": "If multiple skeletons are visible, this setting will add a transparency/dimming effect to those not in focus. This can be further customized in the Overlay settings after migration."
 			},
 			"autosave": {
 				"header": "Auto Save settings",
@@ -1324,6 +1420,37 @@
 		"CustomLegs": "Custom Skeleton Legs"
 	},
 	
+	"expression": {
+		"BrowUpL": "Brow Up (L)",
+		"BrowUpR": "Brow Up (R)",
+		"BrowUp": "Brow Up",
+		"BrowFurrowL": "Brow Furrow (L)",
+		"BrowFurrowR": "Brow Furrow (R)",
+		"BrowFurrow": "Brow Furrow",
+		"BlinkL": "Blink (L)",
+		"BlinkR": "Blink (R)",
+		"Blink": "Blink",
+		"EyeWideL": "Eye Wide (L)",
+		"EyeWideR": "Eye Wide (R)",
+		"EyeWide": "Eye Wide",
+		"CheekRaiseL": "Cheek Raise (L)",
+		"CheekRaiseR": "Cheek Raise (R)",
+		"CheekRaise": "Cheek Raise",
+		"SmileL": "Smile (L)",
+		"SmileR": "Smile (R)",
+		"Smile": "Smile",
+		"GrinL": "Grin (L)",
+		"GrinR": "Grin (R)",
+		"Grin": "Grin",
+		"FrownL": "Frown (L)",
+		"FrownR": "Frown (R)",
+		"Frown": "Frown",
+		"JawOpen": "Jaw Open",
+		"UpperLipOpen": "Upper Lip Open",
+		"LowerLipOpen": "Lower Lip Open",
+		"LipPucker": "Lip Pucker"
+	},
+	
 	"lightType": {
 		"Directional": "Sun Light (Directional)",
 		"PointLight": "Point Light",
@@ -1339,7 +1466,7 @@
 	
 	"misc": {
 		"command_desc": "Toggle the main Ktisis window."
-  },
+	},
 
 	"background": {
 		"Basic": "Basic",
@@ -1430,6 +1557,14 @@
 		"36": "Since updates made in FFXIV Dawntrail, face-expression poses may only load correctly on the race/gender they were created with.",
 		"37": "The vanilla GPose menu has a button to add stickers over your screen - try them out for different icons, emojis and text.",
 		"38": "There's over 280 possible character portraits to display along with these hints.",
-		"39": "Too many windows? Try the alternate Ktisis Toolbar UI in your settings menu!"
+		"39": "Too many windows? Try the alternate Ktisis Toolbar UI in your settings menu!",
+		"40": "You can copy Lights and Actors into your Scene from the World Overlay, just like with objects.",
+		"41": "Bones can be made more transparent on actors you're not currently selecting or camera targeting; check out the Overlay settings!",
+		"42": "The Expressions tab of the Object Editor lets you blend different sliders to mutate or create new facial expressions.",
+		"43": "You can keep Presets visible on your selected or camera-targeted actor with options in our Overlay settings.",
+		"44": "We have our own wiki! Visit docs.ktisis.tools to read up or contribute.",
+		"45": "You can browse Dalamud for these portraits, and many other vanilla icons, using the command: /xldata icon",
+		"46": "Squapes are part of a balanced breakfast.",
+		"47": "Tracking controls in the Camera Editor let you focus the GPose camera on any bone, or even combinations of bones. Try it out!"
 	}
 }
