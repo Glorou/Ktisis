@@ -162,7 +162,7 @@ public sealed class PosingModule : HookModule {
 		return result;
 	}
 	
-	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 49 8B F8")]
+	/*[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 49 8B F8")]
 	private hkaBlendDelegate _hkaBlend = null!;
 	private unsafe delegate void hkaBlendDelegate(
 		hkQsTransformf* dstOut,
@@ -172,6 +172,21 @@ public sealed class PosingModule : HookModule {
 		int n,
 		BLEND_MODE blendMode,
 		int rotationMode
+	);*/
+	
+	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 48 8B FA")]
+	private hkaBlendDelegate _hkaBlend = null!;
+	private unsafe delegate void hkaBlendDelegate(
+	hkQsTransformf* dstOut,
+	float* weightsOut,
+	hkQsTransformf* srcL,
+	float* weightsL,
+	hkQsTransformf* srcR,
+	float* weightsR,
+	float* alpha,
+	int n,
+	BLEND_MODE blendMode,
+	int rotationMode
 	);
 	
 	enum BLEND_MODE
@@ -182,9 +197,21 @@ public sealed class PosingModule : HookModule {
 	};
 
 	public unsafe void OnTick(ReplacementPose replacementPose) {
-		float* ptr = stackalloc float[1];
-		*ptr = .5f;
+		float* alpha = stackalloc float[1];
+		float* weightsR = stackalloc float[replacementPose.BoneCount];
+		float* weightsL = stackalloc float[replacementPose.BoneCount];
+		float* weightsOut = stackalloc float[replacementPose.BoneCount];
+		*alpha = .5f;
 		
+		for (var i = 0; i < replacementPose.BoneCount; i++) {
+			weightsR[i] = 1f;
+			bool isSame = false;
+			isSame |= replacementPose.Pose->Skeleton->ReferencePose.Data[i].Rotation.ToQuaternion() == replacementPose.Pose->LocalPose.Data[i].Rotation.ToQuaternion();
+			isSame |= replacementPose.Pose->Skeleton->ReferencePose.Data[i].Translation.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Translation.ToVector3();
+			isSame |= replacementPose.Pose->Skeleton->ReferencePose.Data[i].Scale.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Scale.ToVector3();
+			weightsL[i] = isSame ? 0f : 1f;
+		}
+
 		this._syncModelSpaceHook.Original.Invoke(replacementPose.OriginalPose);
 		replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[0];
 		replacementPose.Pose->LocalPose[1] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[1];
@@ -192,7 +219,7 @@ public sealed class PosingModule : HookModule {
 		replacementPose.Pose->LocalPose[2] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[2];
 		this._syncModelSpaceHook.Original.Invoke(replacementPose.Pose);
 		//set the root to be the same
-		this._hkaBlend.Invoke(replacementPose.OriginalPose->LocalPose.Data, replacementPose.Pose->LocalPose.Data,replacementPose.OriginalPose->LocalPose.Data, ptr, replacementPose.OriginalPose->LocalPose.Length, BLEND_MODE.NORMAL, 0x0);
+		this._hkaBlend.Invoke(replacementPose.OriginalPose->LocalPose.Data, weightsOut, replacementPose.Pose->LocalPose.Data,weightsL, replacementPose.OriginalPose->LocalPose.Data, weightsR, alpha, replacementPose.OriginalPose->LocalPose.Length, BLEND_MODE.NORMAL, 0x0);
 		this._syncModelSpaceHook.Original.Invoke(replacementPose.OriginalPose);
 	}
 	public List<ReplacementPose> Poses = new List<ReplacementPose>();
@@ -206,6 +233,7 @@ public sealed class PosingModule : HookModule {
 				toAdd.Pose->SetToReferencePose();
 				toAdd.Owner = actor;
 				toAdd.PartitionIndex = i;
+				toAdd.BoneCount = toAdd.Pose->Skeleton->Bones.Length;
 				this.Poses.Add(toAdd);
 			}
 		}
