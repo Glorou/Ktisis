@@ -9,12 +9,13 @@ using Ktisis.Editor.Posing.Data;
 using Ktisis.Editor.Posing.Ik;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Editor.Posing.Types;
 
 public interface IPosingManager : IDisposable {
 	public bool IsValid { get; }
-	public Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> PoseMap { get; }
+	public List<ReplacementPose> PoseMap { get; }
 	
 	public IAttachManager Attachments { get; }
 	public IExpressionManager Expressions { get; }

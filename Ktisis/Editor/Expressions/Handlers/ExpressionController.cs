@@ -14,6 +14,8 @@ using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Types;
 
+using Lumina.Extensions;
+
 namespace Ktisis.Editor.Expressions.Handlers;
 
 public class ExpressionController : IExpressionController {
@@ -109,10 +111,13 @@ public class ExpressionController : IExpressionController {
 		var skele = this.Skeleton.GetSkeleton();
 		if (skele == null || skele->PartialSkeletons == null) return;
 
-		var pose =(hkaPose*) this._scene.Context.Posing.PoseMap[((ActorEntity)((EntityPose)this.Skeleton).Parent)][1].Item2;
+		var map = this._scene.Context.Posing.PoseMap;
+		var replacementPose =this._scene.Context.Posing.PoseMap.FirstOrNull(predicate: p=> p.OriginalPose == skele->PartialSkeletons[1].GetHavokPose(0));
 		//var pose = skele->PartialSkeletons[1].GetHavokPose(0);
-		if (pose == null) return;
+		if (replacementPose == null) return;
+		
 
+		var pose = replacementPose.Value.Pose;
 		if (!this._state.TryGetValue(id, out var state)) return; // Blend state
 
 		var bones = pose->Skeleton->Bones;
