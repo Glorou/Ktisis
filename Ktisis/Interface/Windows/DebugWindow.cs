@@ -43,7 +43,6 @@ public class DebugWindow : KtisisWindow {
 	private readonly TransformTable _transformTable;
 	
 	private readonly FaceLibraryGenerator _faceLibGen;
-	private readonly IFramework _framework;
 
 	// tester inputs
 	private int _gameObjectId;
@@ -89,8 +88,7 @@ public class DebugWindow : KtisisWindow {
 		FaceLibraryGenerator faceLibGen,
 		IDalamudPluginInterface dpi,
 		ConfigManager cfg,
-		LocaleManager locale,
-		IFramework framework
+		LocaleManager locale
 	) : base(
 		"Debug Window", windowId:"###KtisisDebug"
 	) {
@@ -330,6 +328,9 @@ public class DebugWindow : KtisisWindow {
 		var target = this._ctx.Transform.Target;
 		if (target?.GetTransform() == null)
 			return;
+		if(this._ctx.Selection.GetFirstSelected().Type == EntityType.BoneNode)
+			ImGui.Text($"{((BoneNode)this._ctx.Selection.GetFirstSelected()).Info.BoneIndex}");
+
 		var trans = target.GetTransform()!;
 		ImGui.Text($"Target: {target.Primary?.Name}");
 		ImGui.Text($"Position:\n\tX: {trans.Position.X}\n\tY: {trans.Position.Y}\n\tZ: {trans.Position.Z}");

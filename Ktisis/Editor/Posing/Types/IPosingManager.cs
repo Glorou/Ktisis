@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Ktisis.Data.Files;
@@ -13,6 +14,7 @@ namespace Ktisis.Editor.Posing.Types;
 
 public interface IPosingManager : IDisposable {
 	public bool IsValid { get; }
+	public Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> PoseMap { get; }
 	
 	public IAttachManager Attachments { get; }
 	public IExpressionManager Expressions { get; }

@@ -2,6 +2,7 @@
 
 using Ktisis.Editor.Expressions.State;
 using Ktisis.Scene.Decor;
+using Ktisis.Scene.Entities.Skeleton;
 
 namespace Ktisis.Editor.Expressions.Types;
 

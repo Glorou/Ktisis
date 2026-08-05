@@ -170,31 +170,46 @@ public sealed class PosingModule : HookModule {
 		hkQsTransformf* srcR,
 		float* alpha,
 		int n,
-		int blendMode,
+		BLEND_MODE blendMode,
 		int rotationMode
 	);
 	
-	
+	enum BLEND_MODE
+	{
+		NORMAL = 0,
+		ADDITIVE = 1,
+		SUBTRACTIVE = -1
+	};
 
 	public unsafe void OnTick(ReplacementPose replacementPose) {
+		if (replacementPose.PartitionIndex != 1)
+			return;
 		float* ptr = stackalloc float[1];
 		*ptr = .5f;
 		
-		replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->LocalPose[0];
-		replacementPose.Pose->LocalPose[1] = replacementPose.OriginalPose->LocalPose[1];
+		this._syncModelSpaceHook.Original.Invoke(replacementPose.OriginalPose);
+		replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[0];
+		replacementPose.Pose->LocalPose[1] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[1];
+		var temp1 = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[2];
+		replacementPose.Pose->LocalPose[2] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[2];
 		//set the root to be the same
-		this._hkaBlend.Invoke(replacementPose.OriginalPose->LocalPose.Data, replacementPose.Pose->LocalPose.Data,replacementPose.OriginalPose->LocalPose.Data, ptr, replacementPose.OriginalPose->LocalPose.Length, 0x0, 0x0);
+		this._hkaBlend.Invoke(replacementPose.OriginalPose->LocalPose.Data, replacementPose.Pose->LocalPose.Data,replacementPose.OriginalPose->LocalPose.Data, ptr, replacementPose.OriginalPose->LocalPose.Length, BLEND_MODE.NORMAL, 0x0);
+		this._syncModelSpaceHook.Original.Invoke(replacementPose.OriginalPose);
 	}
 	public List<ReplacementPose> Poses = new List<ReplacementPose>();
 	public unsafe void SetupPoseReplacements(ActorEntity actor) {
-		for (ushort i = 0; i < ((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount; i++) {
-			ReplacementPose toAdd = new ReplacementPose();
-			toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
-			toAdd.OriginalPose = actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0);
-			toAdd.Pose->Ctor1(hkaPose.PoseSpace.LocalSpace, actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0)->Skeleton, &toAdd.Pose->LocalPose);
-			toAdd.Owner = actor;
-			toAdd.PartitionIndex = i;
-			this.Poses.Add(toAdd);
+		for (ushort i = 0; i < ((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount; i++) {   //((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount
+			if (actor.GetHuman()->Skeleton->PartialSkeletons[i].HavokPoses == null) {
+
+				ReplacementPose toAdd = new ReplacementPose();
+				toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+				toAdd.OriginalPose = actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0);
+				toAdd.Pose->Ctor1(hkaPose.PoseSpace.LocalSpace, actor.GetHuman()->Skeleton->PartialSkeletons[i].GetHavokPose(0)->Skeleton, &toAdd.Pose->LocalPose);
+				toAdd.Pose->SetToReferencePose();
+				toAdd.Owner = actor;
+				toAdd.PartitionIndex = i;
+				this.Poses.Add(toAdd);
+			}
 		}
 	}
 

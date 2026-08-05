@@ -5,6 +5,8 @@ using Ktisis.Data.Expressions;
 using Ktisis.Data.Serialization;
 using Ktisis.Editor.Expressions.Handlers;
 using Ktisis.Editor.Expressions.Types;
+using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Editor.Expressions;
 
@@ -21,8 +23,8 @@ public class ExpressionManager : IExpressionManager {
 
 	private readonly List<IExpressionController> _controllers = [];
 
-	public IExpressionController CreateController() {
-		var controller = new ExpressionController(this);
+	public IExpressionController CreateController(ISceneManager scene) {
+		var controller = new ExpressionController(this, scene);
 		this._controllers.Add(controller);
 		return controller;
 	}

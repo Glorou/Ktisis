@@ -45,6 +45,8 @@ public class PosingManager : IPosingManager {
 	private readonly PoseAutoSave AutoSave;
 	private Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> _poseMap = new();
 
+	public Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> PoseMap => this._poseMap;
+
 	public PosingManager(
 		IEditorContext context,
 		HookScope scope,

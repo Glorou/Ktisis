@@ -38,7 +38,7 @@ public sealed class PoseBuilder : EntityBuilder<EntityPose, IPoseBuilder>, IPose
 
 	protected override EntityPose Build() {
 		var ik = this.Scene.Context.Posing.CreateIkController();
-		var expCon = this.Scene.Context.Posing.Expressions.CreateController();
+		var expCon = this.Scene.Context.Posing.Expressions.CreateController(this.Scene);
 		var pose = new EntityPose(this.Scene, this, ik, expCon);
 		ik.Setup(pose);
 		expCon.Setup(pose);

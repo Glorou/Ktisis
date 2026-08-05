@@ -3,24 +3,31 @@ using System.Linq;
 using System.Numerics;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Common.Utility;
 using Ktisis.Editor.Expressions.State;
 using Ktisis.Editor.Expressions.Types;
 using Ktisis.Editor.Posing;
 using Ktisis.Scene.Decor;
+using Ktisis.Scene.Entities.Game;
+using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Editor.Expressions.Handlers;
 
 public class ExpressionController : IExpressionController {
 	private readonly IExpressionManager _mgr;
+	private readonly ISceneManager _scene;
 
 	private ISkeleton? Skeleton;
 	
 	public ExpressionController(
-		IExpressionManager mgr
+		IExpressionManager mgr,
+		ISceneManager scene
 	) {
 		this._mgr = mgr;
+		this._scene = scene;
 	}
 
 	public void Setup(ISkeleton skeleton) {
@@ -102,7 +109,8 @@ public class ExpressionController : IExpressionController {
 		var skele = this.Skeleton.GetSkeleton();
 		if (skele == null || skele->PartialSkeletons == null) return;
 
-		var pose = skele->PartialSkeletons[1].GetHavokPose(0);
+		var pose =(hkaPose*) this._scene.Context.Posing.PoseMap[((ActorEntity)((EntityPose)this.Skeleton).Parent)][1].Item2;
+		//var pose = skele->PartialSkeletons[1].GetHavokPose(0);
 		if (pose == null) return;
 
 		if (!this._state.TryGetValue(id, out var state)) return; // Blend state
