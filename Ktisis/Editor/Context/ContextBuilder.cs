@@ -78,6 +78,7 @@ public class ContextBuilder {
 		var attach = new AttachManager();
 		this._sceneData = new SceneDataService(context, this._objectTable, this._framework);
 		var autoSave = new PoseAutoSave(context, this._framework, this._format, this._sceneData );
+		var _ = new FestivalService(this._framework);
 
 
 		
