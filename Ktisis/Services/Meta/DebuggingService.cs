@@ -18,7 +18,8 @@ public unsafe class DebuggingService : IDisposable {
 	
 	const int PAGE_EXECUTE_READ = 0x20;
 	const int PAGE_GUARD = 0x100;
-	const uint STATUS_GUARD_PAGE_VIOLATION = 2147483649; // Exception code = 0x80000001
+	const uint STATUS_GUARD_PAGE_VIOLATION = 2147483649;// Exception code = 0x80000001
+	const uint EXCEPTION_SINGLE_STEP = 2147483653; // Exception code = 0x80000004
 	const long EXCEPTION_CONTINUE_EXECUTION = -1;
 	const long EXCEPTION_CONTINUE_SEARCH = 0;
 	[DllImport("kernel32.dll", SetLastError = true)]
@@ -69,10 +70,14 @@ public unsafe class DebuggingService : IDisposable {
 		if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
 			counter++;
 			if (!_requestedUnhook) {
+							//Set Trap flag
 			} else {
 				RemoveVectoredExceptionHandler(handlerPtr);
 			}
 			return EXCEPTION_CONTINUE_EXECUTION; //Continue Execution
+		} else if (ExceptionInfo.exceptionRecord.ExceptionCode == EXCEPTION_SINGLE_STEP) {
+			ResetGuardForAddress();
+			return EXCEPTION_CONTINUE_EXECUTION;
 		}
 		return EXCEPTION_CONTINUE_SEARCH; //We arent handling this, so let it try and find another exception handler
 	}
