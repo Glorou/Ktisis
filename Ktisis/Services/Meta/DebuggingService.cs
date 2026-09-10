@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Security;
+using System.Threading;
 
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
@@ -18,8 +20,8 @@ public unsafe class DebuggingService : IDisposable {
 	
 	const int PAGE_EXECUTE_READ = 0x20;
 	const int PAGE_GUARD = 0x100;
-	const uint STATUS_GUARD_PAGE_VIOLATION = 2147483649;// Exception code = 0x80000001
-	const uint EXCEPTION_SINGLE_STEP = 2147483653; // Exception code = 0x80000004
+	const uint STATUS_GUARD_PAGE_VIOLATION = (UInt32)0x80000001L;// Exception code = 0x80000001
+	const uint STATUS_SINGLE_STEP = (UInt32)0x80000004L; // Exception code = 0x80000004
 	const long EXCEPTION_CONTINUE_EXECUTION = -1;
 	const long EXCEPTION_CONTINUE_SEARCH = 0;
 	[DllImport("kernel32.dll", SetLastError = true)]
@@ -45,6 +47,25 @@ public unsafe class DebuggingService : IDisposable {
 		[Out] byte[] lpBuffer,
 		int dwSize,
 		out IntPtr lpNumberOfBytesRead);
+
+	private static byte[] asmSet = {
+		0x9C,
+		0x66, 0x89, 0xE5,
+		0x66, 0x81, 0x4D, 0x00, 0x00, 0x01,
+		0x9D
+	};
+	private static byte[] asmUnset = {
+		0x9C,
+		0x66, 0x89, 0xE5,
+		0x66, 0x81, 0x65, 0x00, 0xFF, 0xFE,
+		0x9D
+	};
+
+	[SuppressUnmanagedCodeSecurity]
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	private delegate void AssemblyDelegate();
+	
+	
 	#endregion
 	
 	#region Handler Stuff
@@ -54,10 +75,11 @@ public unsafe class DebuggingService : IDisposable {
 	internal static nint handlerPtr;
 	public long retrn;
 	public static int counter = 0;
-	public bool requestedUnhook => _requestedUnhook;
-	internal static bool _requestedUnhook ;
+	internal static bool _requestedUnhook;
 	public int Count => counter;
+	
 	public unsafe static long VectoredExceptionHandler(IntPtr ExceptionInfo_Ptr) {
+		Ktisis.Log.Debug("Hit VEH");
 		byte[] data1 = new byte[Marshal.SizeOf(typeof(IntPtr))];
 		ReadProcessMemory(GetCurrentProcess(), ExceptionInfo_Ptr, data1, data1.Length, out _);
 
@@ -69,14 +91,38 @@ public unsafe class DebuggingService : IDisposable {
 		EXCEPTION_POINTERS ExceptionInfo = MarshalBytesTo<EXCEPTION_POINTERS>(data2);
 		if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
 			counter++;
+			Ktisis.Log.Debug("Caught Guard");
 			if (!_requestedUnhook) {
+				fixed (byte* ptr = asmSet) {
+					var address = (IntPtr)ptr;
+					if (!VirtualProtectEx(Process.GetCurrentProcess().Handle, address,
+						(UIntPtr) asmSet.Length, 0x40 /* EXECUTE_READWRITE */, out uint _))
+					{
+						Ktisis.Log.Error("Couldnt set executable bit");
+					}
+					var fn = Marshal.GetDelegateForFunctionPointer<AssemblyDelegate>(address);
+					fn();
+				}
 							//Set Trap flag
 			} else {
 				RemoveVectoredExceptionHandler(handlerPtr);
 			}
 			return EXCEPTION_CONTINUE_EXECUTION; //Continue Execution
-		} else if (ExceptionInfo.exceptionRecord.ExceptionCode == EXCEPTION_SINGLE_STEP) {
+		} else if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_SINGLE_STEP) {
+			Ktisis.Log.Debug("Caught Trap");
 			ResetGuardForAddress();
+			Ktisis.Log.Debug("Reset Guard");
+			fixed (byte* ptr = asmUnset) {
+				var address = (IntPtr)ptr;
+				if (!VirtualProtectEx(Process.GetCurrentProcess().Handle, address,
+					(UIntPtr) asmUnset.Length, 0x40 /* EXECUTE_READWRITE */, out uint _))
+				{
+					Ktisis.Log.Error("Couldnt set executable bit");
+				}
+				var fn = Marshal.GetDelegateForFunctionPointer<AssemblyDelegate>(address);
+				fn();
+			}
+			Ktisis.Log.Debug("Cleared Trap");
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
 		return EXCEPTION_CONTINUE_SEARCH; //We arent handling this, so let it try and find another exception handler
@@ -84,7 +130,7 @@ public unsafe class DebuggingService : IDisposable {
 	public void RegisterExceptionHandler() {
 		if (this.isHandlerSetup)
 			return;
-		
+
 		try {
 			handler = VectoredExceptionHandler;
 			handlerPtr = Marshal.GetFunctionPointerForDelegate(handler);
