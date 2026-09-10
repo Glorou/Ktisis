@@ -5,6 +5,11 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using DWORD64 = System.UInt64;
+using DWORD = System.Int32;
+using WORD = System.SByte;
+using ULONGLONG = System.UInt64;
+using LONGLONG = System.Int64;
 
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
@@ -50,7 +55,7 @@ public unsafe class DebuggingService : IDisposable {
 
 	// Get context of thread x64, in x64 application
 	[DllImport("kernel32.dll", SetLastError = true)]
-	static extern bool GetThreadContext(IntPtr hThread, ref CONTEXT64 lpContext);
+	static extern bool GetThreadContext(IntPtr hThread, ref CONTEXT lpContext);
 	
 	[DllImport("kernel32.dll")]
 	private static extern bool Wow64SetThreadContext(IntPtr thread, int[] context);
@@ -70,9 +75,6 @@ public unsafe class DebuggingService : IDisposable {
 	public unsafe static long VectoredExceptionHandler(EXCEPTION_POINTERS *ExceptionInfo_Ptr) {
 		
 		Ktisis.Log.Debug("Hit VEH");
-		byte[] data1 = new byte[Marshal.SizeOf(typeof(IntPtr))];
-		
-
 
 		if (ExceptionInfo_Ptr->exceptionRecord->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
 			counter++;
@@ -86,7 +88,7 @@ public unsafe class DebuggingService : IDisposable {
 			Ktisis.Log.Debug("Caught Trap");
 			ResetGuardForAddress();
 			Ktisis.Log.Debug("Reset Guard");
-			ExceptionInfo_Ptr->contextRecord->EFlags &= 0x100;
+			ExceptionInfo_Ptr->contextRecord->EFlags &= ~0x100;
 			Ktisis.Log.Debug("Cleared Trap");
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -137,7 +139,7 @@ public unsafe class DebuggingService : IDisposable {
 			return false;
 		}
 		
-		var newOption = pageInfo.AllocationProtect | AllocationProtect.PAGE_GUARD;
+		var newOption = pageInfo.Protect | 0x00000100;
 		Ktisis.Log.Debug($"{processHandle} {pageInfo.BaseAddress:X8} {pageInfo.RegionSize} {pageInfo.AllocationBase:X8} {pageInfo.Protect} {newOption}");
 		var res = VirtualProtectEx(processHandle, (nint)pageInfo.BaseAddress, (nuint)1, (uint)newOption, out var _);
 		if (!res) {
@@ -222,48 +224,141 @@ public unsafe struct EXCEPTION_POINTERS
 	public CONTEXT *contextRecord;
 
 }
-[StructLayout(LayoutKind.Sequential)]
-public struct CONTEXT
-{
-	public UInt32 ContextFlags;
-	UInt32 Dr0;
-	UInt32 Dr1;
-	UInt32 Dr2;
-	UInt32 Dr3;
-	UInt32 Dr6;
-	UInt32 Dr7;
-	FLOATING_SAVE_AREA FloatSave;
-	UInt32 SegGs;
-	UInt32 SegFs;
-	UInt32 SegEs;
-	UInt32 SegDs;
-	UInt32 Edi;
-	UInt32 Esi;
-	UInt32 Ebx;
-	UInt32 Edx;
-	UInt32 Ecx;
-	UInt32 Eax;
-	UInt32 Ebp;
-	UInt32 Eip;
-	UInt32 SegCs;
-	public UInt32 EFlags;
-	UInt32 Esp;
-	UInt32 SegSs;
-};
 
-[StructLayout(LayoutKind.Sequential)]
-struct FLOATING_SAVE_AREA
-{
-	UInt32 ControlWord;
-	UInt32 StatusWord;
-	UInt32 TagWord;
-	UInt32 ErrorOffset;
-	UInt32 ErrorSelector;
-	UInt32 DataOffset;
-	UInt32 DataSelector;
-	byte RegisterArea;
-	UInt32 Cr0NpxState;
-};
+
+  [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    public unsafe struct CONTEXT
+    {
+        //
+        // Register parameter home addresses.
+        //
+        // N.B. These fields are for convience - they could be used to extend the
+        //      context record in the future.
+        //
+
+        public DWORD64 P1Home;
+        public DWORD64 P2Home;
+        public DWORD64 P3Home;
+        public DWORD64 P4Home;
+        public DWORD64 P5Home;
+        public DWORD64 P6Home;
+
+        //
+        // Control flags.
+        //
+        public DWORD ContextFlags;
+        public DWORD MxCsr;
+
+        //
+        // Segment Registers and processor flags.
+        //
+        public WORD SegCs;
+        public WORD SegDs;
+        public WORD SegEs;
+        public WORD SegFs;
+        public WORD SegGs;
+        public WORD SegSs;
+        public DWORD EFlags;
+
+        //
+        // Debug registers
+        //
+        public DWORD64 Dr0;
+        public DWORD64 Dr1;
+        public DWORD64 Dr2;
+        public DWORD64 Dr3;
+        public DWORD64 Dr6;
+        public DWORD64 Dr7;
+
+        //
+        // Integer registers.
+        //
+        public DWORD64 Rax;
+        public DWORD64 Rcx;
+        public DWORD64 Rdx;
+        public DWORD64 Rbx;
+        public DWORD64 Rsp;
+        public DWORD64 Rbp;
+        public DWORD64 Rsi;
+        public DWORD64 Rdi;
+        public DWORD64 R8;
+        public DWORD64 R9;
+        public DWORD64 R10;
+        public DWORD64 R11;
+        public DWORD64 R12;
+        public DWORD64 R13;
+        public DWORD64 R14;
+        public DWORD64 R15;
+
+        //
+        // Program counter.
+        //
+        public DWORD64 Rip;
+
+        //
+        // Floating point state.
+        //
+        public DUMMYUNIONNAME dummyUnion;
+
+        //
+        // Vector registers.
+        //
+        M128A* VectorRegister;
+        public DWORD64 VectorControl;
+
+        //
+        // Special debug control registers.
+        //
+        public DWORD64 DebugControl;
+        public DWORD64 LastBranchToRip;
+        public DWORD64 LastBranchFromRip;
+        public DWORD64 LastExceptionToRip;
+        public DWORD64 LastExceptionFromRip;
+    }
+
+    struct XMM_SAVE_AREA32
+    {
+
+    }
+
+    public unsafe struct DUMMY
+    {
+        M128A* Header;
+        M128A* Legacy;
+        M128A Xmm0;
+        M128A Xmm1;
+        M128A Xmm2;
+        M128A Xmm3;
+        M128A Xmm4;
+        M128A Xmm5;
+        M128A Xmm6;
+        M128A Xmm7;
+        M128A Xmm8;
+        M128A Xmm9;
+        M128A Xmm10;
+        M128A Xmm11;
+        M128A Xmm12;
+        M128A Xmm13;
+        M128A Xmm14;
+        M128A Xmm15;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct DUMMYUNIONNAME
+    {
+        [FieldOffset(0)]
+        XMM_SAVE_AREA32 FltSave;
+        [FieldOffset(1)]
+        DUMMY Dummy;
+    }
+
+    public struct M128A
+    {
+        ULONGLONG Low;
+        LONGLONG High;
+    };
+
+
 
 [Flags]
 public enum ProcessAccessFlags : uint
@@ -286,103 +381,7 @@ public enum ProcessAccessFlags : uint
 /// <summary>
 /// x64
 /// </summary>
-[StructLayout(LayoutKind.Sequential, Pack = 16)]
-public struct CONTEXT64
-{
-	public ulong P1Home;
-	public ulong P2Home;
-	public ulong P3Home;
-	public ulong P4Home;
-	public ulong P5Home;
-	public ulong P6Home;
 
-	public CONTEXT_FLAGS ContextFlags;
-	public uint MxCsr;
-
-	public ushort SegCs;
-	public ushort SegDs;
-	public ushort SegEs;
-	public ushort SegFs;
-	public ushort SegGs;
-	public ushort SegSs;
-	public uint EFlags;
-
-	public ulong Dr0;
-	public ulong Dr1;
-	public ulong Dr2;
-	public ulong Dr3;
-	public ulong Dr6;
-	public ulong Dr7;
-
-	public ulong Rax;
-	public ulong Rcx;
-	public ulong Rdx;
-	public ulong Rbx;
-	public ulong Rsp;
-	public ulong Rbp;
-	public ulong Rsi;
-	public ulong Rdi;
-	public ulong R8;
-	public ulong R9;
-	public ulong R10;
-	public ulong R11;
-	public ulong R12;
-	public ulong R13;
-	public ulong R14;
-	public ulong R15;
-	public ulong Rip;
-
-	public XSAVE_FORMAT64 DUMMYUNIONNAME;
-
-	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 26)]
-	public M128A[] VectorRegister;
-	public ulong VectorControl;
-
-	public ulong DebugControl;
-	public ulong LastBranchToRip;
-	public ulong LastBranchFromRip;
-	public ulong LastExceptionToRip;
-	public ulong LastExceptionFromRip;
-}
-
-[StructLayout(LayoutKind.Sequential, Pack = 16)]
-public struct XSAVE_FORMAT64
-{
-	public ushort ControlWord;
-	public ushort StatusWord;
-	public byte TagWord;
-	public byte Reserved1;
-	public ushort ErrorOpcode;
-	public uint ErrorOffset;
-	public ushort ErrorSelector;
-	public ushort Reserved2;
-	public uint DataOffset;
-	public ushort DataSelector;
-	public ushort Reserved3;
-	public uint MxCsr;
-	public uint MxCsr_Mask;
-
-	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-	public M128A[] FloatRegisters;
-
-	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-	public M128A[] XmmRegisters;
-
-	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 96)]
-	public byte[] Reserved4;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public struct M128A
-{
-	public ulong High;
-	public long Low;
-
-	public override string ToString()
-	{
-		return string.Format("High:{0}, Low:{1}", this.High, this.Low);
-	}
-}
 
 public enum CONTEXT_FLAGS : uint
 {
