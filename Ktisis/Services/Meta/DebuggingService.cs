@@ -48,28 +48,17 @@ public unsafe class DebuggingService : IDisposable {
 		int dwSize,
 		out IntPtr lpNumberOfBytesRead);
 
-	private static byte[] asmSet = {
-		0x9C,
-		0x66, 0x89, 0xE5,
-		0x66, 0x81, 0x4D, 0x00, 0x00, 0x01,
-		0x9D
-	};
-	private static byte[] asmUnset = {
-		0x9C,
-		0x66, 0x89, 0xE5,
-		0x66, 0x81, 0x65, 0x00, 0xFF, 0xFE,
-		0x9D
-	};
-
-	[SuppressUnmanagedCodeSecurity]
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	private delegate void AssemblyDelegate();
+	// Get context of thread x64, in x64 application
+	[DllImport("kernel32.dll", SetLastError = true)]
+	static extern bool GetThreadContext(IntPtr hThread, ref CONTEXT64 lpContext);
 	
+	[DllImport("kernel32.dll")]
+	private static extern bool Wow64SetThreadContext(IntPtr thread, int[] context);
 	
 	#endregion
 	
 	#region Handler Stuff
-	public delegate long VectoredExceptionHandlerDelegate(IntPtr ExceptionInfo_Ptr);
+	public delegate long VectoredExceptionHandlerDelegate(EXCEPTION_POINTERS *ExceptionInfo_Ptr);
 
 	internal static VectoredExceptionHandlerDelegate handler;
 	internal static nint handlerPtr;
@@ -78,50 +67,26 @@ public unsafe class DebuggingService : IDisposable {
 	internal static bool _requestedUnhook;
 	public int Count => counter;
 	
-	public unsafe static long VectoredExceptionHandler(IntPtr ExceptionInfo_Ptr) {
+	public unsafe static long VectoredExceptionHandler(EXCEPTION_POINTERS *ExceptionInfo_Ptr) {
+		
 		Ktisis.Log.Debug("Hit VEH");
 		byte[] data1 = new byte[Marshal.SizeOf(typeof(IntPtr))];
-		ReadProcessMemory(GetCurrentProcess(), ExceptionInfo_Ptr, data1, data1.Length, out _);
-
-		IntPtr aux = MarshalBytesTo<IntPtr>(data1);
 		
-		byte[] data2 = new byte[Marshal.SizeOf(typeof(EXCEPTION_POINTERS))];
-		ReadProcessMemory(GetCurrentProcess(), aux, data2, data2.Length, out _);
 
-		EXCEPTION_POINTERS ExceptionInfo = MarshalBytesTo<EXCEPTION_POINTERS>(data2);
-		if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
+
+		if (ExceptionInfo_Ptr->exceptionRecord->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
 			counter++;
 			Ktisis.Log.Debug("Caught Guard");
-			if (!_requestedUnhook) {
-				fixed (byte* ptr = asmSet) {
-					var address = (IntPtr)ptr;
-					if (!VirtualProtectEx(Process.GetCurrentProcess().Handle, address,
-						(UIntPtr) asmSet.Length, 0x40 /* EXECUTE_READWRITE */, out uint _))
-					{
-						Ktisis.Log.Error("Couldnt set executable bit");
-					}
-					var fn = Marshal.GetDelegateForFunctionPointer<AssemblyDelegate>(address);
-					fn();
-				}
-							//Set Trap flag
-			} else {
+			if (!_requestedUnhook) 
+				ExceptionInfo_Ptr->contextRecord->EFlags |= 0x100; //Set Trap flag
+			else 
 				RemoveVectoredExceptionHandler(handlerPtr);
-			}
 			return EXCEPTION_CONTINUE_EXECUTION; //Continue Execution
-		} else if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_SINGLE_STEP) {
+		} else if (ExceptionInfo_Ptr->exceptionRecord->ExceptionCode == STATUS_SINGLE_STEP) {
 			Ktisis.Log.Debug("Caught Trap");
 			ResetGuardForAddress();
 			Ktisis.Log.Debug("Reset Guard");
-			fixed (byte* ptr = asmUnset) {
-				var address = (IntPtr)ptr;
-				if (!VirtualProtectEx(Process.GetCurrentProcess().Handle, address,
-					(UIntPtr) asmUnset.Length, 0x40 /* EXECUTE_READWRITE */, out uint _))
-				{
-					Ktisis.Log.Error("Couldnt set executable bit");
-				}
-				var fn = Marshal.GetDelegateForFunctionPointer<AssemblyDelegate>(address);
-				fn();
-			}
+			ExceptionInfo_Ptr->contextRecord->EFlags &= 0x100;
 			Ktisis.Log.Debug("Cleared Trap");
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -239,27 +204,28 @@ public enum AllocationProtect : uint
 	PAGE_WRITECOMBINE = 0x00000400
 }
 [StructLayout( LayoutKind.Sequential )]
-public struct EXCEPTION_RECORD
+public unsafe struct EXCEPTION_RECORD
 {
 	public uint ExceptionCode;
 	public uint ExceptionFlags;
 	public IntPtr ExceptionRecord;
 	public IntPtr ExceptionAddress;
 	public uint NumberParameters;
-	[MarshalAs( UnmanagedType.ByValArray, SizeConst = 15, ArraySubType = UnmanagedType.U4 )] public uint[] ExceptionInformation;
+	private uint __alignment;
+	public IntPtr ExceptionInformation;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct EXCEPTION_POINTERS
 {
-	public EXCEPTION_RECORD exceptionRecord;
-	public CONTEXT contextRecord;
+	public EXCEPTION_RECORD *exceptionRecord;
+	public CONTEXT *contextRecord;
 
 }
 [StructLayout(LayoutKind.Sequential)]
 public struct CONTEXT
 {
-	UInt32 ContextFlags;
+	public UInt32 ContextFlags;
 	UInt32 Dr0;
 	UInt32 Dr1;
 	UInt32 Dr2;
@@ -280,7 +246,7 @@ public struct CONTEXT
 	UInt32 Ebp;
 	UInt32 Eip;
 	UInt32 SegCs;
-	UInt32 EFlags;
+	public UInt32 EFlags;
 	UInt32 Esp;
 	UInt32 SegSs;
 };
@@ -317,5 +283,118 @@ public enum ProcessAccessFlags : uint
 	Synchronize = 0x00100000
 }
 
+/// <summary>
+/// x64
+/// </summary>
+[StructLayout(LayoutKind.Sequential, Pack = 16)]
+public struct CONTEXT64
+{
+	public ulong P1Home;
+	public ulong P2Home;
+	public ulong P3Home;
+	public ulong P4Home;
+	public ulong P5Home;
+	public ulong P6Home;
 
+	public CONTEXT_FLAGS ContextFlags;
+	public uint MxCsr;
+
+	public ushort SegCs;
+	public ushort SegDs;
+	public ushort SegEs;
+	public ushort SegFs;
+	public ushort SegGs;
+	public ushort SegSs;
+	public uint EFlags;
+
+	public ulong Dr0;
+	public ulong Dr1;
+	public ulong Dr2;
+	public ulong Dr3;
+	public ulong Dr6;
+	public ulong Dr7;
+
+	public ulong Rax;
+	public ulong Rcx;
+	public ulong Rdx;
+	public ulong Rbx;
+	public ulong Rsp;
+	public ulong Rbp;
+	public ulong Rsi;
+	public ulong Rdi;
+	public ulong R8;
+	public ulong R9;
+	public ulong R10;
+	public ulong R11;
+	public ulong R12;
+	public ulong R13;
+	public ulong R14;
+	public ulong R15;
+	public ulong Rip;
+
+	public XSAVE_FORMAT64 DUMMYUNIONNAME;
+
+	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 26)]
+	public M128A[] VectorRegister;
+	public ulong VectorControl;
+
+	public ulong DebugControl;
+	public ulong LastBranchToRip;
+	public ulong LastBranchFromRip;
+	public ulong LastExceptionToRip;
+	public ulong LastExceptionFromRip;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 16)]
+public struct XSAVE_FORMAT64
+{
+	public ushort ControlWord;
+	public ushort StatusWord;
+	public byte TagWord;
+	public byte Reserved1;
+	public ushort ErrorOpcode;
+	public uint ErrorOffset;
+	public ushort ErrorSelector;
+	public ushort Reserved2;
+	public uint DataOffset;
+	public ushort DataSelector;
+	public ushort Reserved3;
+	public uint MxCsr;
+	public uint MxCsr_Mask;
+
+	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+	public M128A[] FloatRegisters;
+
+	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+	public M128A[] XmmRegisters;
+
+	[MarshalAs(UnmanagedType.ByValArray, SizeConst = 96)]
+	public byte[] Reserved4;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct M128A
+{
+	public ulong High;
+	public long Low;
+
+	public override string ToString()
+	{
+		return string.Format("High:{0}, Low:{1}", this.High, this.Low);
+	}
+}
+
+public enum CONTEXT_FLAGS : uint
+{
+	CONTEXT_i386 = 0x10000,
+	CONTEXT_i486 = 0x10000,   //  same as i386
+	CONTEXT_CONTROL = CONTEXT_i386 | 0x01, // SS:SP, CS:IP, FLAGS, BP
+	CONTEXT_INTEGER = CONTEXT_i386 | 0x02, // AX, BX, CX, DX, SI, DI
+	CONTEXT_SEGMENTS = CONTEXT_i386 | 0x04, // DS, ES, FS, GS
+	CONTEXT_FLOATING_POINT = CONTEXT_i386 | 0x08, // 387 state
+	CONTEXT_DEBUG_REGISTERS = CONTEXT_i386 | 0x10, // DB 0-3,6,7
+	CONTEXT_EXTENDED_REGISTERS = CONTEXT_i386 | 0x20, // cpu specific extensions
+	CONTEXT_FULL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS,
+	CONTEXT_ALL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS |  CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS |  CONTEXT_EXTENDED_REGISTERS
+}
 #endregion
