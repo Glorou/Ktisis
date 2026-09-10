@@ -275,8 +275,29 @@ public class DebugWindow : KtisisWindow {
 		}
 	}
 
-	private void DrawManagerTab() {
-		ImGui.Text("TODO");
+	private unsafe void DrawManagerTab() {
+		using(ImRaii.Disabled(Ktisis.Debugger.isHandlerSetup))
+			if (ImGui.Button("Register handler")) {
+				Ktisis.Debugger.RegisterExceptionHandler();
+			}
+		using (ImRaii.Disabled(!Ktisis.Debugger.isHandlerSetup)) {
+			if (ImGui.Button("Unregister handler")) {
+				Ktisis.Debugger.UnregisterExceptionHandler();
+			}
+			var selection = this._ctx.Selection.GetFirstSelected();
+			if (selection is BoneNode bone) {
+
+				if (ImGui.Button($"Register {(nint)(bone.GetPose()->ModelPose.Data) + bone.Info.BoneIndex:X8}")) {
+					var status = Ktisis.Debugger.SetupGuardForAddress((nint)bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex);
+					if(status)
+						Ktisis.Log.Debug("Set page guard");
+					else 
+						Ktisis.Log.Debug("Setting page guard failed");
+				}
+
+			}
+		}
+		ImGui.Text($"Hits: {Ktisis.Debugger.Count} at {Ktisis.Debugger.retrn:X8}");
 	}
 
 	private void DrawDiagnosticsTab() {
@@ -311,6 +332,21 @@ public class DebugWindow : KtisisWindow {
 				out var rot,
 				out var pos
 			);
+			unsafe {
+				if (ImGui.Button("Copy Bone Position Address")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address:X8}");
+				}
+				if (ImGui.Button("Copy Bone Rotation Address (pos+0x10)")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address+0x10:X8}");
+				}
+				if (ImGui.Button("Copy Bone Scale Address (pos+0x20)")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address+0x20:X8}");
+				}
+
+			}
 			var t = bone.GetTransformModel() ?? new Transform();
 			ImGui.Spacing();
 			ImGui.Text($"Havok (Matrix Decompose / Raw Transform)");
