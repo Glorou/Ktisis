@@ -69,8 +69,7 @@ public unsafe class DebuggingService : IDisposable {
 	internal static bool _requestedUnhook;
 	internal static ulong BaseAddress;
 	public int Count => counter;
-	private static CancellationTokenSource TokenSource = new CancellationTokenSource();
-	private static CancellationToken Token = TokenSource.Token;
+	private static bool _resettingPage;
 	
 	public unsafe static long VectoredExceptionHandler(IntPtr ExceptionInfo_Ptr) {
 		Ktisis.Log.Debug("Hit VEH");
@@ -148,13 +147,18 @@ public unsafe class DebuggingService : IDisposable {
 	}
 
 	public static async Task ReregisterPage() {
-		Ktisis.Log.Debug("Launching Thread to requeue page");
-		Thread t = new Thread(() => {
-			Thread.Sleep((Random.Shared.Next() % 3) + 1);
-			
-			ResetGuardForAddress();
-		});
-		t.Start();
+		if (!_resettingPage)
+		{
+			_resettingPage = true;
+			Ktisis.Log.Debug("Launching Thread to requeue page");
+			Thread t = new Thread(() =>
+			{
+				Thread.Sleep(1);
+
+				ResetGuardForAddress();
+			});
+			t.Start();
+		}
 	}
 	
 	#endregion
@@ -206,6 +210,8 @@ public unsafe class DebuggingService : IDisposable {
 			Ktisis.Log.Debug($"Reset Protect{error}");
 			return false;
 		}
+
+		_resettingPage = false;
 		return true;
 	}
 	static T MarshalBytesTo<T>(byte[] bytes)
