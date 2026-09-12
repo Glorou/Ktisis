@@ -276,11 +276,12 @@ public class DebugWindow : KtisisWindow {
 	}
 
 	private unsafe void DrawManagerTab() {
-		using(ImRaii.Disabled(Ktisis.Debugger.isHandlerSetup))
+
 			if (ImGui.Button("Register handler")) {
 				Ktisis.Debugger.RegisterExceptionHandler();
+				Ktisis.Debugger.RegisterCallback();
 			}
-		using (ImRaii.Disabled(!Ktisis.Debugger.isHandlerSetup)) {
+
 			if (ImGui.Button("Unregister handler")) {
 				Ktisis.Debugger.UnregisterExceptionHandler();
 			}
@@ -296,8 +297,6 @@ public class DebugWindow : KtisisWindow {
 				}
 
 			}
-		}
-		ImGui.Text($"Hits: {Ktisis.Debugger.Count} at {Ktisis.Debugger.retrn:X8}");
 	}
 
 	private void DrawDiagnosticsTab() {
