@@ -5,6 +5,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GLib", "GLib", "{621156E2-C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GLib", "GLib\GLib\GLib.csproj", "{BD7A2117-AA9F-4C23-8551-BD6793E4FFE3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ipfd", "ipfd", "{78AC68CF-849E-4B26-BF16-2C962F8A4A42}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ipfd", "ipfd\ipfd.vcxproj", "{8C8993DE-20B8-4339-A240-EC0ED97AD04C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -19,11 +23,16 @@ Global
 		{BD7A2117-AA9F-4C23-8551-BD6793E4FFE3}.Debug|x64.Build.0 = Debug|Any CPU
 		{BD7A2117-AA9F-4C23-8551-BD6793E4FFE3}.Release|x64.ActiveCfg = Release|Any CPU
 		{BD7A2117-AA9F-4C23-8551-BD6793E4FFE3}.Release|x64.Build.0 = Release|Any CPU
+		{8C8993DE-20B8-4339-A240-EC0ED97AD04C}.Debug|x64.ActiveCfg = Debug|x64
+		{8C8993DE-20B8-4339-A240-EC0ED97AD04C}.Debug|x64.Build.0 = Debug|x64
+		{8C8993DE-20B8-4339-A240-EC0ED97AD04C}.Release|x64.ActiveCfg = Release|x64
+		{8C8993DE-20B8-4339-A240-EC0ED97AD04C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BD7A2117-AA9F-4C23-8551-BD6793E4FFE3} = {621156E2-C9A4-4315-8A20-9259A98026E2}
+		{8C8993DE-20B8-4339-A240-EC0ED97AD04C} = {78AC68CF-849E-4B26-BF16-2C962F8A4A42}
 	EndGlobalSection
 EndGlobal
