@@ -9,6 +9,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
+
 using Ktisis.Common.Utility;
 using Ktisis.Data.Files;
 using Newtonsoft.Json;
@@ -278,25 +280,19 @@ public class DebugWindow : KtisisWindow {
 	private unsafe void DrawManagerTab() {
 
 			if (ImGui.Button("Register handler")) {
-				Ktisis.Debugger.RegisterExceptionHandler();
-				Ktisis.Debugger.RegisterCallback();
+				Ktisis.Debugger.Setup();
 			}
 
 			if (ImGui.Button("Unregister handler")) {
-				Ktisis.Debugger.UnregisterExceptionHandler();
+				Ktisis.Debugger.Destroy();
 			}
 			var selection = this._ctx.Selection.GetFirstSelected();
 			if (selection is BoneNode bone) {
 
-				if (ImGui.Button($"Register {(nint)(bone.GetPose()->ModelPose.Data) + bone.Info.BoneIndex:X8}")) {
-					var status = Ktisis.Debugger.SetupGuardForAddress((nint)bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex);
-					if(status)
-						Ktisis.Log.Debug("Set page guard");
-					else 
-						Ktisis.Log.Debug("Setting page guard failed");
-				}
-
+				if (ImGui.Button($"Register {(nint)(bone.GetPose()->ModelPose.Data) + bone.Info.BoneIndex:X8}")) 
+					Ktisis.Debugger.SetupGuardForAddress((nint)bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex, (ulong)sizeof(hkQsTransformf));
 			}
+			
 	}
 
 	private void DrawDiagnosticsTab() {

@@ -35,7 +35,7 @@ public sealed class Ktisis : IDalamudPlugin {
 		Log = new LoggingService(logger);
 		Notification = notification;
 		Locale = new LocaleManager(dpi);
-		Debugger = new DebuggingService();
+
 		this._services = new ServiceComposer()
 			.AddFromAttributes()
 			.AddDalamudServices(dpi)
@@ -47,6 +47,7 @@ public sealed class Ktisis : IDalamudPlugin {
 		this._services.GetRequiredService<PluginContext>()
 			.Initialize();
 		this._services.GetRequiredService<IpcProvider>().RegisterIpc();
+		Debugger = new DebuggingService(this._services.GetService<IFramework>());
 	}
 
 	// Version info
