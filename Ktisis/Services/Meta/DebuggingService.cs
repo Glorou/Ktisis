@@ -5,13 +5,16 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
+
+using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 using DWORD64 = System.UInt64;
 using DWORD = System.Int32;
-using WORD = System.SByte;
+using WORD = ushort;
 using ULONGLONG = System.UInt64;
 using LONGLONG = System.Int64;
 
-using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
 using Ktisis.Core.Attributes;
 
@@ -23,10 +26,10 @@ public unsafe class DebuggingService : IDisposable {
 	
 	#region Native Code
 	
-	const int PAGE_EXECUTE_READ = 0x20;
+	
+
 	const int PAGE_GUARD = 0x100;
 	const uint STATUS_GUARD_PAGE_VIOLATION = (UInt32)0x80000001L;// Exception code = 0x80000001
-	const uint STATUS_SINGLE_STEP = (UInt32)0x80000004L; // Exception code = 0x80000004
 	const long EXCEPTION_CONTINUE_EXECUTION = -1;
 	const long EXCEPTION_CONTINUE_SEARCH = 0;
 	[DllImport("kernel32.dll", SetLastError = true)]
@@ -52,47 +55,67 @@ public unsafe class DebuggingService : IDisposable {
 		[Out] byte[] lpBuffer,
 		int dwSize,
 		out IntPtr lpNumberOfBytesRead);
-
-	// Get context of thread x64, in x64 application
-	[DllImport("kernel32.dll", SetLastError = true)]
-	static extern bool GetThreadContext(IntPtr hThread, ref CONTEXT lpContext);
-	
-	[DllImport("kernel32.dll")]
-	private static extern bool Wow64SetThreadContext(IntPtr thread, int[] context);
 	
 	#endregion
 	
 	#region Handler Stuff
-	public delegate long VectoredExceptionHandlerDelegate(EXCEPTION_POINTERS *ExceptionInfo_Ptr);
+	public delegate long VectoredExceptionHandlerDelegate(IntPtr ExceptionInfo_Ptr);
 
 	internal static VectoredExceptionHandlerDelegate handler;
 	internal static nint handlerPtr;
 	public long retrn;
+	internal static nint ProcessAddress;
 	public static int counter = 0;
 	internal static bool _requestedUnhook;
+	internal static ulong BaseAddress;
 	public int Count => counter;
+	private static CancellationTokenSource TokenSource = new CancellationTokenSource();
+	private static CancellationToken Token = TokenSource.Token;
 	
-	public unsafe static long VectoredExceptionHandler(EXCEPTION_POINTERS *ExceptionInfo_Ptr) {
-		
+	public unsafe static long VectoredExceptionHandler(IntPtr ExceptionInfo_Ptr) {
 		Ktisis.Log.Debug("Hit VEH");
+		byte[] data1 = new byte[Marshal.SizeOf(typeof(IntPtr))];
+		ReadProcessMemory(GetCurrentProcess(), ExceptionInfo_Ptr, data1, data1.Length, out _);
 
-		if (ExceptionInfo_Ptr->exceptionRecord->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
-			counter++;
-			Ktisis.Log.Debug("Caught Guard");
-			if (!_requestedUnhook) 
-				ExceptionInfo_Ptr->contextRecord->EFlags |= 0x100; //Set Trap flag
+		IntPtr aux = MarshalBytesTo<IntPtr>(data1);
+		
+		byte[] data2 = new byte[Marshal.SizeOf(typeof(EXCEPTION_POINTERS))];
+		ReadProcessMemory(GetCurrentProcess(), aux, data2, data2.Length, out _);
+
+		EXCEPTION_POINTERS ExceptionInfo = MarshalBytesTo<EXCEPTION_POINTERS>(data2);
+		if (ExceptionInfo.exceptionRecord.ExceptionCode == STATUS_GUARD_PAGE_VIOLATION) {
+
+			Ktisis.Log.Debug("Page Accessed");
+
+			if (ExceptionInfo.exceptionRecord.NumberParameters == 2) {
+				Ktisis.Log.Debug("Correct params");
+				ulong addressAccessed = 0;
+				uint readwrite = 0;
+				readwrite = ExceptionInfo.exceptionRecord.ExceptionInformation[0];
+				addressAccessed = ExceptionInfo.exceptionRecord.ExceptionInformation[1];
+
+				if (addressAccessed >= (ulong)TransformToWatch &&
+				    addressAccessed <= (ulong)(TransformToWatch + sizeof(hkQsTransformf))) //the accessed address was inside of the address we want to track
+				{
+					Ktisis.Log.Debug("Correct address");
+					counter++;
+					Ktisis.Log.Debug($"Caught Guard Address: {ExceptionInfo.exceptionRecord.ExceptionAddress} {ExceptionInfo.exceptionRecord.NumberParameters} {readwrite} {addressAccessed:X8}");
+					/*StackTrace trace = new StackTrace(3);
+					var frames = trace.GetFrames();
+					Ktisis.Log.Debug($"Stacktrace: {frames[0]}, {frames[1]}, {frames[2]}");*/
+				}
+			}
+
+			if (!_requestedUnhook)
+			{
+				ReregisterPage();
+			}
+
 			else 
 				RemoveVectoredExceptionHandler(handlerPtr);
+			
 			return EXCEPTION_CONTINUE_EXECUTION; //Continue Execution
-		} else if (ExceptionInfo_Ptr->exceptionRecord->ExceptionCode == STATUS_SINGLE_STEP) {
-			Ktisis.Log.Debug("Caught Trap");
-			ResetGuardForAddress();
-			Ktisis.Log.Debug("Reset Guard");
-			ExceptionInfo_Ptr->contextRecord->EFlags &= ~0x100;
-			Ktisis.Log.Debug("Cleared Trap");
-			return EXCEPTION_CONTINUE_EXECUTION;
-		}
-		return EXCEPTION_CONTINUE_SEARCH; //We arent handling this, so let it try and find another exception handler
+		} return EXCEPTION_CONTINUE_SEARCH; //We arent handling this, so let it try and find another exception handler
 	}
 	public void RegisterExceptionHandler() {
 		if (this.isHandlerSetup)
@@ -107,7 +130,7 @@ public unsafe class DebuggingService : IDisposable {
 
 				this.isHandlerSetup = false;
 			} else {
-				Ktisis.Log.Debug("added veh");
+				Ktisis.Log.Debug("Added veh");
 				this.isHandlerSetup = true;
 			}
 		} catch(Exception e) {
@@ -119,43 +142,68 @@ public unsafe class DebuggingService : IDisposable {
 		if (!this.isHandlerSetup)
 			return;
 		_requestedUnhook = true;
+		RemoveVectoredExceptionHandler(handlerPtr);
+		TransformToWatch = nint.Zero;
 		this.isHandlerSetup = false;
+	}
+
+	public static async Task ReregisterPage() {
+		Ktisis.Log.Debug("Launching Thread to requeue page");
+		Thread t = new Thread(() => {
+			Thread.Sleep((Random.Shared.Next() % 3) + 1);
+			
+			ResetGuardForAddress();
+		});
+		t.Start();
 	}
 	
 	#endregion
 
-	internal List<IntPtr> WatchAddresses = new List<nint>();
-	internal static Tuple<nint, nint, uint> PageInfo = new(0, 0, 0);
+	internal static IntPtr TransformToWatch = IntPtr.Zero;
+
+	
 	internal bool isHandlerSetup;
 	public bool SetupGuardForAddress(IntPtr address) {
-		if (PageInfo.Item1 != 0) {
-			
-		}
-		MEMORY_BASIC_INFORMATION64 pageInfo = new MEMORY_BASIC_INFORMATION64();
-		var processHandle = GetCurrentProcess();
-		var e = VirtualQueryEx(processHandle, address, out pageInfo, (uint)sizeof(MEMORY_BASIC_INFORMATION64));
-		if (e == 0) {
-			Ktisis.Log.Debug($"{Marshal.GetLastWin32Error()}");
+		if (TransformToWatch == address || !this.isHandlerSetup) {
 			return false;
 		}
+		TransformToWatch = address;
+		MEMORY_BASIC_INFORMATION64 pageInfo = new MEMORY_BASIC_INFORMATION64();
+		ProcessAddress = GetCurrentProcess();
+		var e = VirtualQueryEx(ProcessAddress, address, out pageInfo, (uint)sizeof(MEMORY_BASIC_INFORMATION64));
+		if (e == 0) {
+			Ktisis.Log.Debug($"Query {Marshal.GetLastWin32Error()}");
+			return false;
+		}
+		BaseAddress = pageInfo.BaseAddress;
 		
 		var newOption = pageInfo.Protect | 0x00000100;
-		Ktisis.Log.Debug($"{processHandle} {pageInfo.BaseAddress:X8} {pageInfo.RegionSize} {pageInfo.AllocationBase:X8} {pageInfo.Protect} {newOption}");
-		var res = VirtualProtectEx(processHandle, (nint)pageInfo.BaseAddress, (nuint)1, (uint)newOption, out var _);
+		Ktisis.Log.Debug($"{ProcessAddress} {pageInfo.BaseAddress:X8} {pageInfo.RegionSize} {pageInfo.AllocationBase:X8} {pageInfo.Protect} {newOption}");
+		var res = VirtualProtectEx(ProcessAddress, (nint)BaseAddress, (nuint)1, (uint)newOption, out var _);
 		if (!res) {
 			var error = Marshal.GetLastWin32Error();
-			Ktisis.Log.Debug($"{error}");
+			Ktisis.Log.Debug($"Protect {error}");
 			return false;
 		}
-		PageInfo = new((nint)processHandle, (nint)pageInfo.BaseAddress, (uint)newOption);
 		return true;
 	}
 
 	public static bool ResetGuardForAddress() {
-		var res = VirtualProtectEx(PageInfo.Item1, (nint)PageInfo.Item2, (nuint)1, (uint)PageInfo.Item3, out var _);
+		Ktisis.Log.Debug($"Reset Guard for address");
+		MEMORY_BASIC_INFORMATION64 pageInfo = new MEMORY_BASIC_INFORMATION64();
+		var e = VirtualQueryEx(ProcessAddress, TransformToWatch, out pageInfo, (uint)sizeof(MEMORY_BASIC_INFORMATION64));
+		if (e == 0 || (pageInfo.Protect & 0x00000100) != 0 ) { //only apply the guard if we need it
+			Ktisis.Log.Debug($"Reset Query{Marshal.GetLastWin32Error()}, {pageInfo.Protect}");
+			return false;
+		}
+		
+		var newOption = pageInfo.Protect | 0x00000100;
+		Ktisis.Log.Debug($"{ProcessAddress} {pageInfo.BaseAddress:X8} {TransformToWatch} {pageInfo.AllocationBase:X8} {pageInfo.Protect} {newOption}");
+
+		var res = VirtualProtectEx(ProcessAddress, (nint)BaseAddress, (nuint)1, (uint)newOption, out var _);
 		if (!res) {
 			var error = Marshal.GetLastWin32Error();
-			Ktisis.Log.Debug($"{error}");
+			Ktisis.Log.Debug($"Reset Protect{error}");
 			return false;
 		}
 		return true;
@@ -206,22 +254,21 @@ public enum AllocationProtect : uint
 	PAGE_WRITECOMBINE = 0x00000400
 }
 [StructLayout( LayoutKind.Sequential )]
-public unsafe struct EXCEPTION_RECORD
+public struct EXCEPTION_RECORD
 {
 	public uint ExceptionCode;
 	public uint ExceptionFlags;
 	public IntPtr ExceptionRecord;
 	public IntPtr ExceptionAddress;
 	public uint NumberParameters;
-	private uint __alignment;
-	public IntPtr ExceptionInformation;
+	[MarshalAs( UnmanagedType.ByValArray, SizeConst = 15, ArraySubType = UnmanagedType.U4 )] public uint[] ExceptionInformation;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct EXCEPTION_POINTERS
 {
-	public EXCEPTION_RECORD *exceptionRecord;
-	public CONTEXT *contextRecord;
+	public EXCEPTION_RECORD exceptionRecord;
+	public CONTEXT contextRecord;
 
 }
 
@@ -378,22 +425,5 @@ public enum ProcessAccessFlags : uint
 	Synchronize = 0x00100000
 }
 
-/// <summary>
-/// x64
-/// </summary>
 
-
-public enum CONTEXT_FLAGS : uint
-{
-	CONTEXT_i386 = 0x10000,
-	CONTEXT_i486 = 0x10000,   //  same as i386
-	CONTEXT_CONTROL = CONTEXT_i386 | 0x01, // SS:SP, CS:IP, FLAGS, BP
-	CONTEXT_INTEGER = CONTEXT_i386 | 0x02, // AX, BX, CX, DX, SI, DI
-	CONTEXT_SEGMENTS = CONTEXT_i386 | 0x04, // DS, ES, FS, GS
-	CONTEXT_FLOATING_POINT = CONTEXT_i386 | 0x08, // 387 state
-	CONTEXT_DEBUG_REGISTERS = CONTEXT_i386 | 0x10, // DB 0-3,6,7
-	CONTEXT_EXTENDED_REGISTERS = CONTEXT_i386 | 0x20, // cpu specific extensions
-	CONTEXT_FULL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS,
-	CONTEXT_ALL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS |  CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS |  CONTEXT_EXTENDED_REGISTERS
-}
 #endregion
