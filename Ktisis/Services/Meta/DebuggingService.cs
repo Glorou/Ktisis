@@ -9,6 +9,11 @@ using Ktisis.Core.Attributes;
 
 namespace Ktisis.Services.Meta;
 
+public enum Operation{
+	Read,
+	Write,
+	ReadWrite
+}
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct Access_Info {
 	public bool inUse;
@@ -20,6 +25,7 @@ public unsafe struct Access_Info {
 public struct Address_Info {
 	public UInt64 addressToWatch;
 	public UInt64 sizeOfType;
+	public Operation operation;
 	public bool watched;
 }
 public struct Managed_Access {
@@ -60,19 +66,18 @@ public unsafe class DebuggingService {
 	
 	public void Setup() {
 		AttachVEH();
-		array = (Access_Info*)Marshal.AllocHGlobal(sizeof(Access_Info) * 20);
-		addresses = (Address_Info*)Marshal.AllocHGlobal(sizeof(Address_Info) * 20);
+		this.array = (Access_Info*)Marshal.AllocHGlobal(sizeof(Access_Info) * 20);
+		this.addresses = (Address_Info*)Marshal.AllocHGlobal(sizeof(Address_Info) * 20);
 		for (var i = 0; i < 20; i++) {
 			this.array[i].inUse = false;
 			this.addresses[i].watched = false;
-			addresses[i].addressToWatch = 0;
-			array[i].frameTrace = (ulong*)Marshal.AllocHGlobal(sizeof(ulong) * 3);
-			array[i].frameTrace[0] = 0;
-			array[i].frameTrace[1] = 0;
-			array[i].frameTrace[2] = 0;
+			this.addresses[i].operation = Operation.Write;
+			this.addresses[i].addressToWatch = 0;
+			this.array[i].frameTrace = (ulong*)Marshal.AllocHGlobal(sizeof(ulong) * 3);
+			this.array[i].frameTrace[0] = 0;
+			this.array[i].frameTrace[1] = 0;
+			this.array[i].frameTrace[2] = 0;
 		}
-
-		
 		SetupParams(array, 20, 3,  addresses, 20);
 		this._framework.Update += this.Heartbeat;
 	}
@@ -107,7 +112,6 @@ public unsafe class DebuggingService {
 	}
 
 	public void Heartbeat(IFramework framework) {
-		
 		for (var i = 0; i < 20; i++) {
 			if (this.array[i].inUse) {
 				Managed_Access a = new();
@@ -121,7 +125,6 @@ public unsafe class DebuggingService {
 				Ktisis.Log.Debug($"{a.addressAccessed:X8} : [0]{GetModuleAddress((nint)a.frameTrace[0]):X8} [1]{GetModuleAddress((nint)a.frameTrace[1]):X8} [2]{GetModuleAddress((nint)a.frameTrace[2]):X8}");
 				this.array[i].inUse = false;
 			}
-			RefreshAddresses();
 		}
 	}
 	
