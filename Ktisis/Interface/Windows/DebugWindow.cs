@@ -289,8 +289,8 @@ public class DebugWindow : KtisisWindow {
 			var selection = this._ctx.Selection.GetFirstSelected();
 			if (selection is BoneNode bone) {
 
-				if (ImGui.Button($"Register {(nint)(bone.GetPose()->ModelPose.Data) + bone.Info.BoneIndex:X8}")) 
-					Ktisis.Debugger.SetupGuardForAddress((nint)bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex, (ulong)sizeof(hkQsTransformf));
+				if (ImGui.Button($"Register {(nint)(bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex):X8}")) 
+					Ktisis.Debugger.SetupGuardForAddress((nint)(bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex), (ulong)sizeof(hkQsTransformf));
 			}
 			
 	}

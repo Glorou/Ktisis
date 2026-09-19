@@ -67,18 +67,20 @@ public unsafe class DebuggingService {
 	public void Setup() {
 		AttachVEH();
 		this.array = (Access_Info*)Marshal.AllocHGlobal(sizeof(Access_Info) * 20);
-		this.addresses = (Address_Info*)Marshal.AllocHGlobal(sizeof(Address_Info) * 20);
+		this.addresses = (Address_Info*)Marshal.AllocHGlobal(sizeof(Address_Info) * 2);
 		for (var i = 0; i < 20; i++) {
 			this.array[i].inUse = false;
-			this.addresses[i].watched = false;
-			this.addresses[i].operation = Operation.Write;
-			this.addresses[i].addressToWatch = 0;
 			this.array[i].frameTrace = (ulong*)Marshal.AllocHGlobal(sizeof(ulong) * 3);
 			this.array[i].frameTrace[0] = 0;
 			this.array[i].frameTrace[1] = 0;
 			this.array[i].frameTrace[2] = 0;
 		}
-		SetupParams(array, 20, 3,  addresses, 20);
+		for (var i = 0; i < 2; i++) {
+			this.addresses[i].watched = false;
+			this.addresses[i].operation = Operation.Write;
+			this.addresses[i].addressToWatch = 0;
+		}
+		SetupParams(array, 20, 3,  addresses, 2);
 		this._framework.Update += this.Heartbeat;
 	}
 
@@ -93,7 +95,7 @@ public unsafe class DebuggingService {
 	public void Destroy() {
 		this._framework.Update -= this.Heartbeat;
 		DetachVEH();
-		for (var i = 0; i < 20; i++) {
+		for (var i = 0; i < 2; i++) {
 			if (addresses[i].watched)
 				RemoveAddress(addresses[i].addressToWatch);
 		}
@@ -101,10 +103,10 @@ public unsafe class DebuggingService {
 	}
 
 	public void SetupGuardForAddress(IntPtr address, UInt64 sizeOfType) {
-		for (var i = 0; i < 20; i++) {
+		for (var i = 0; i < 2; i++) {
 			if (addresses[i].addressToWatch == 0) {
-				addresses[i].addressToWatch = (ulong)(address - sizeof(IntPtr));
-				addresses[i].sizeOfType = sizeOfType + (ulong)sizeof(IntPtr);
+				addresses[i].addressToWatch = (ulong)(address);
+				addresses[i].sizeOfType = sizeOfType;
 				RefreshAddresses();
 				return;
 			}
@@ -127,6 +129,5 @@ public unsafe class DebuggingService {
 			}
 		}
 	}
-	
 }
 
