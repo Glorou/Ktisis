@@ -19,8 +19,10 @@ public interface IExpressionController {
 	public void Unload();
 
 	public void ResetBlendState();
+	public List<ExpressionMemento> ResetBlendWeights(bool weightsOnly = true);
 
 	public void ApplyBlend(string id, float weight);
+	public void SetWeight(string id, float weight);
 
 	public void Destroy();
 }

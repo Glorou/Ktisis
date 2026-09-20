@@ -66,6 +66,27 @@ public class ExpressionController : IExpressionController {
 		foreach (var (_, state) in this._state)
 			state.Reset();
 	}
+
+	public List<ExpressionMemento> ResetBlendWeights(bool weightsOnly = true) {
+		List<ExpressionMemento> mementos = [];
+		foreach (var (id, state) in this._state) {
+			var initial = state.Weight;
+
+			// if bulk resetting, actually apply blends - if not, just set the slider states
+			if (!weightsOnly)
+				this.ApplyBlend(id, 0.0f);
+			else
+				state.Weight = 0.0f;
+
+			mementos.Add(new ExpressionMemento(this) {
+				ExpressionId = id,
+				Initial = initial,
+				Final = 0.0f,
+				WeightsOnly = weightsOnly
+			});
+		}
+		return mementos;
+	}
 	
 	// Update handler
 
@@ -153,6 +174,11 @@ public class ExpressionController : IExpressionController {
 			last.Scale = scale;
 		}
 
+		state.Weight = weight;
+	}
+
+	public void SetWeight(string id, float weight) {
+		if (!this._state.TryGetValue(id, out var state)) return; // Blend state
 		state.Weight = weight;
 	}
 	
