@@ -187,7 +187,7 @@ public static class HavokPosing {
 		}
 	}
 
-	private unsafe static void Propagate(hkaPose* pose, int boneIx, Vector3 sourcePos, Vector3 deltaPos, Quaternion deltaRot) {
+	public unsafe static void Propagate(hkaPose* pose, int boneIx, Vector3 sourcePos, Vector3 deltaPos, Quaternion deltaRot) {
 		// handles propagating a bone to its immediate children
 		var hkaSkele = pose->Skeleton;
 		for (var i = boneIx; i < hkaSkele->Bones.Length; i++) {

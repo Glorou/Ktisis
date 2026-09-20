@@ -25,6 +25,8 @@ using Ktisis.Editor.Posing.Types;
 using Ktisis.Interop.Hooking;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
+using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Editor.Posing;
 
@@ -43,7 +45,9 @@ public class PosingManager : IPosingManager {
 	public IExpressionManager Expressions { get; }
 
 	private readonly PoseAutoSave AutoSave;
-	private Dictionary<ActorEntity, Dictionary<ushort, Tuple<nint, nint>>> _poseMap = new();
+
+
+	public List<ReplacementPose> PoseMap => this.PoseModule?.Poses;
 
 	public PosingManager(
 		IEditorContext context,
@@ -137,6 +141,10 @@ public class PosingManager : IPosingManager {
 		}
 
 		this.PoseModule?.SetEnabled(enable);
+		foreach (var actor in this._context.Scene.Children.OfType<ActorEntity>())
+		{
+			this.SetuphkaPose(actor);
+		}
 	}
 
 	public Task SyncFaceModelSpace(ActorEntity actor) {
@@ -352,7 +360,7 @@ public class PosingManager : IPosingManager {
 	}
 
 	public void SetuphkaPose(ActorEntity actor) => this.PoseModule?.SetupPoseReplacements(actor);
-	public unsafe void SetupPoseForActor(ActorEntity actor) {
+	/*public unsafe void SetupPoseForActor(ActorEntity actor) {
 		var skel = actor.CharacterBaseEx->Base.Skeleton;
 		var partialmap = new Dictionary<ushort, Tuple<nint, nint>>();
 		var partialCount = skel->PartialSkeletonCount;
@@ -362,7 +370,7 @@ public class PosingManager : IPosingManager {
 			partialmap.Add(i, new Tuple<nint, nint>((nint)oldpose, (nint)newPose));
 		}
 		this._poseMap.Add(actor, partialmap);
-	}
+	}*/
 	// Disposal
 
 	public void Dispose() {

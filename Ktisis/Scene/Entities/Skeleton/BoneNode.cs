@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Numerics;
 
 using FFXIVClientStructs.Havok.Animation.Rig;
@@ -8,7 +9,7 @@ using Ktisis.Editor.Posing.Attachment;
 using Ktisis.Editor.Posing.Types;
 using Ktisis.Scene.Decor;
 using Ktisis.Scene.Types;
-
+using Lumina.Extensions;
 using RenderSkeleton = FFXIVClientStructs.FFXIV.Client.Graphics.Render.Skeleton;
 
 namespace Ktisis.Scene.Entities.Skeleton;
@@ -33,7 +34,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 	public unsafe override bool IsValid => base.IsValid && this.GetSkeleton() != null && this.GetPose() != null;
 	
-	public unsafe hkaPose* GetPose() => this.Pose.GetPose(this.Info.PartialIndex);
+	public unsafe hkaPose* GetPose() => this.Scene.Context.Posing.PoseMap.FirstOrNull(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)) == null ?   this.Pose.GetPose(this.Info.PartialIndex) : this.Scene.Context.Posing.PoseMap.First(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)).Pose;
 	public unsafe RenderSkeleton* GetSkeleton() => this.Pose.GetSkeleton();
 
 	public bool MatchesId(int pId, int bId) => this.Info.PartialIndex == pId && this.Info.BoneIndex == bId;
@@ -59,7 +60,8 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 	protected unsafe void SetMatrixWorld(Matrix4x4 matrix) {
 		var skeleton = this.GetSkeleton();
-		var pose = skeleton != null ? this.GetPose() : null;
+		 //pose = skeleton != null ? this.GetPose() : null;
+		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)).Pose ;
 		if (pose == null) return;
 		if(this.GetTransformModel() is not Transform transform) return;
 
@@ -67,6 +69,9 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 		matrix.Translation -= model.Position;
 		matrix = Matrix4x4.Transform(matrix, Quaternion.Inverse(model.Rotation));
 		matrix.Translation /= model.Scale;
+
+
+
 		HavokPosing.SetModelTransform(pose, this.Info.BoneIndex, new Transform(matrix, transform));
 	}
 

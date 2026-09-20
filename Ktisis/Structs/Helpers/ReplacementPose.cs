@@ -7,7 +7,7 @@ namespace Ktisis.Structs.Helpers;
 public unsafe struct ReplacementPose {
 	public hkaPose* Pose;
 	public hkaPose* OriginalPose;
-	public ushort PartitionIndex;
-	public uint BoneCount;
+	public ushort PartialIndex;
+	public int BoneCount;
 	public ActorEntity Owner;
 }

@@ -43,7 +43,6 @@ public class DebugWindow : KtisisWindow {
 	private readonly TransformTable _transformTable;
 	
 	private readonly FaceLibraryGenerator _faceLibGen;
-	private readonly IFramework _framework;
 
 	// tester inputs
 	private int _gameObjectId;
@@ -89,8 +88,7 @@ public class DebugWindow : KtisisWindow {
 		FaceLibraryGenerator faceLibGen,
 		IDalamudPluginInterface dpi,
 		ConfigManager cfg,
-		LocaleManager locale,
-		IFramework framework
+		LocaleManager locale
 	) : base(
 		"Debug Window", windowId:"###KtisisDebug"
 	) {
