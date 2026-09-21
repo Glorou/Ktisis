@@ -215,11 +215,15 @@ public sealed class PosingModule : HookModule {
 			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Scale.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Scale.ToVector3();
 			weightsR[i] = isSame ? 0f : 1f;
 		}
-		if (replacementPose.Owner.GetHuman()->Skeleton->PartialSkeletons[replacementPose.PartialIndex]
-			    .ConnectedParentBoneIndex != 0xFF)
+		var pid = replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedParentBoneIndex;
+		if ( 0 <= pid && pid <= replacementPose.BoneCount)
 		{
-			weightsR[replacementPose.Owner.GetHuman()->Skeleton->PartialSkeletons[replacementPose.PartialIndex]
-				.ConnectedBoneIndex] = 0f;
+			/*var r = replacementPose.Pose->AccessBoneModelSpace(replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedBoneIndex, hkaPose.PropagateOrNot.Propagate);
+			var o =  replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[0].GetHavokPose(0)->AccessBoneModelSpace(pid, hkaPose.PropagateOrNot.Propagate);
+			r->Rotation = o->Rotation;
+			r->Scale = o->Scale;
+			r->Translation = o->Translation;*/
+			weightsR[replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedBoneIndex] = 0f;
 		}
 		//replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[0];
 		/*Transform temp = new Transform();
