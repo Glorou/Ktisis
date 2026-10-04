@@ -21,7 +21,7 @@ namespace Ktisis.Interface.Components.Workspace;
 public class SceneDragDropHandler {
 	private readonly IEditorContext _ctx;
 
-	private bool UnhandledType(EntityType type) => type is not (EntityType.BoneGroup or EntityType.Armature or EntityType.BoneNode or EntityType.Invalid or EntityType.ModelSlot);
+	private bool UnhandledType(EntityType type) => type is not (EntityType.BoneGroup or EntityType.Armature or EntityType.BoneNode or EntityType.Invalid or EntityType.ModelSlot or EntityType.Weapon);
 	private IAttachManager Manager => this._ctx.Posing.Attachments;
 	
 	public SceneDragDropHandler(
@@ -90,8 +90,13 @@ public class SceneDragDropHandler {
 			} else {
 				ImGui.GetWindowDrawList().AddRect(itemMin, itemMax, ImGui.GetColorU32(ImGuiCol.DragDropTarget));
 			}
-		var pl = ImGui.AcceptDragDropPayload(PayloadId);		
-		if (pl.Handle != null && this.Source is SceneEntity source)
+		var pl = ImGui.AcceptDragDropPayload(PayloadId);
+		if (pl.Handle != null && this._ctx.Selection.Count > 1 ) {
+			foreach (var src in this._ctx.Selection.GetSelected().OrderBy(p => this._ctx.Scene.Children.Index().First(c => c.Item == p))) {
+				this.HandlePayload(entity, src);
+			}
+
+		}else if (pl.Handle != null && this.Source is SceneEntity source)
 			this.HandlePayload(entity, source);
 	}
 	
@@ -117,13 +122,29 @@ public class SceneDragDropHandler {
 		bool cursorIsBelow = ImGui.GetMousePos().Y >= (ImGui.GetItemRectMax().Y - (itemSize.Y * 0.25f));
 
 		if (payload.IsDelivery()) {
+
+			if (target.IsChildOf(source))
+				return; //are you fucking stupid?
 			Ktisis.Log.Info($"{target.Name} accepting payload from {source.Name}");
 			lock (this._ctx.Scene.Children) {
 				if (cursorIsBelow || cursorIsAbove) {
+
 					int index = target.Parent!.Children.Index().First(c => c.Item == target).Index;
-					
+
 					if (cursorIsBelow)
 						index += 1;
+					
+					if (source.Type == EntityType.Folder && target.Parent != source.Parent) { //Assume this is a reorder if it happens
+						index = source.Root.Children.Index().First(c => target.IsChildOf(c.Item)).Index;
+
+						if (cursorIsBelow)
+							index += 1;
+						source.Parent!.Remove(source);		
+						source.Parent!.AddAtIndex(source, index);
+						source.Parent.Update();
+						this._ctx.Scene.Refresh();
+						return;
+					}
 
 					source.Parent?.Remove(source);
 					target.Parent!.AddAtIndex(source, index);

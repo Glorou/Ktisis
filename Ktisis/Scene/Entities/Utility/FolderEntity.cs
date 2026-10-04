@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
+using Ktisis.Common.Utility;
 using Ktisis.Scene.Decor;
 using Ktisis.Scene.Types;
 
@@ -18,11 +19,13 @@ public class FolderEntity: SceneEntity, IHideable, IDeletable {
 	public bool IsHidden {
 		get => this._Hidden;
 		set {
-			foreach (var child in this.RecurseVisible())
-				child.IsHidden = value;
-			foreach (var child in this.RecurseOverlays())
-				child.Visible = !value;
 			this._Hidden = value;
+			foreach (var child in this.RecurseVisible()) 
+				if(child.IsHidden != this._Hidden)
+					child.ToggleHidden();
+			foreach (var child in this.RecurseOverlays())
+				child.Visible = !this._Hidden;
+	
 		}
 	}
 
@@ -45,7 +48,30 @@ public class FolderEntity: SceneEntity, IHideable, IDeletable {
 	}
 
 	public void ToggleHidden() => IsHidden = !IsHidden;
-	
+
+/*	public Transform? GetTransform() {
+		Transform trs = new Transform();
+		foreach (var c in Children.OfType<ITransform>()) {
+			trs.Position += c.GetTransform()!.Position;
+		}
+		trs.Position.
+		trs.Position /= this.Children.Count();
+		return trs;
+	}
+	public void SetTransform(Transform trans) {
+		Transform offset = this.GetTransform()!;
+		offset.Position -= trans.Position;
+		offset.Rotation -= trans.Rotation;
+		offset.Scale -= trans.Scale;
+		foreach (var c in Children.OfType<ITransform>()) {
+			var local = c.GetTransform();
+			local!.Position += offset.Position;
+			local.Rotation += offset.Rotation;
+			local.Scale += offset.Scale;
+			c.SetTransform(local);
+		}
+	}*/
+
 	protected IEnumerable<IHideable> RecurseVisible()
 		=> this.Children.Where(child => child is IHideable).Cast<IHideable>();
 	protected IEnumerable<OverlayEntity> RecurseOverlays()
