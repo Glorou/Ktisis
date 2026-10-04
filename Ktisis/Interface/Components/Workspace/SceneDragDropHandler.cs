@@ -16,6 +16,8 @@ using Ktisis.Scene.Entities;
 using Ktisis.Scene.Entities.Utility;
 using Ktisis.Scene.Types;
 
+using Lumina.Extensions;
+
 namespace Ktisis.Interface.Components.Workspace;
 
 public class SceneDragDropHandler {
@@ -135,14 +137,19 @@ public class SceneDragDropHandler {
 						index += 1;
 					
 					if (source.Type == EntityType.Folder && target.Parent != source.Parent) { //Assume this is a reorder if it happens
-						index = source.Root.Children.Index().First(c => target.IsChildOf(c.Item)).Index;
-
+						var id = source.Root.Children.Index().FirstOrNull(c => target.IsChildOf(c.Item));
+						if (id.HasValue)
+							index = id.Value.Index;
+						else
+							index = source.Root.Children.Count();
+						
 						if (cursorIsBelow)
 							index += 1;
+						var parent = source.Parent;
 						source.Parent!.Remove(source);		
-						source.Parent!.AddAtIndex(source, index);
+						parent!.AddAtIndex(source, index);
+						source.Parent = parent;
 						source.Parent.Update();
-						this._ctx.Scene.Refresh();
 						return;
 					}
 
@@ -150,7 +157,6 @@ public class SceneDragDropHandler {
 					target.Parent!.AddAtIndex(source, index);
 					source.Parent = target.Parent;
 					target.Parent.Update();
-					this._ctx.Scene.Refresh();
 				} else {
 					if (target is IAttachTarget tar && source is IAttachable attach)
 						this.Manager.Attach(attach, tar);
