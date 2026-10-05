@@ -100,9 +100,9 @@ public class CustomizeEditorTab {
 	private void DrawSideFrame(MakeTypeRace data) {
 		var size = ImGui.GetContentRegionAvail();
 		
-		/*if (this._context.Config.Editor.UseToolbar)
+		if(this._context!.Config.Editor is { UseToolbar: true, ToolbarResizable: false })
 			size = new Vector2(MathF.Max(size.X * SideRatio, 240.0f),420) * ImGuiHelpers.GlobalScale;
-		else*/
+		else
 			size.X = MathF.Max(size.X * SideRatio, 240.0f);
 
 		using var _frame = ImRaii.Child("##CustomizeSideFrame", size, true);
