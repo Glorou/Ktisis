@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace Ktisis.Structs.Vfx;
 
@@ -7,4 +8,5 @@ public struct VfxResourceInstance {
 	[FieldOffset(0)] public unsafe nint* __vfTable;
 
 	[FieldOffset(0x60)] public VfxResourceHandle Handle;
+	[FieldOffset(0xA0)] public Vector4 Color;
 }
