@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Structs.Attachment;
 
@@ -25,6 +29,17 @@ public struct SkeletonEx {
 			if (this.ElementParam[i].ElementId != id) continue;
 			index = this.ElementBoneMap[i];
 			return true;
+		}
+		return false;
+	}
+
+	private unsafe Span<PartialSkeleton> PartialSkeletons => new Span<PartialSkeleton>(this.Skeleton.PartialSkeletons, this.Skeleton.PartialSkeletonCount);
+
+	public unsafe bool IsPoseOwnedBy(hkaPose* pose) {
+		var e = PartialSkeletons;
+		foreach (PartialSkeleton s in e) {
+			if (s.HavokPoses.Contains((ulong)pose))
+				return true;
 		}
 		return false;
 	}

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -11,13 +13,17 @@ using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.Havok.Animation.Rig;
 using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
+using FFXIVClientStructs.Interop;
 
 using Ktisis.Data.Json;
 using Ktisis.Editor.Context;
 using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
+using Ktisis.Scene.Entities;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Services.Game;
+using Ktisis.Structs.Actors;
+using Ktisis.Structs.Animation;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,9 +37,11 @@ public sealed class PosingModule : HookModule {
 	private readonly PosingManager Manager;
 	private readonly ActorService _actors;
 	private readonly IpcProvider _ipc;
-
+	private readonly ContextManager _ctx;
 	public event SkeletonInitHandler? OnSkeletonInit;
 	public event Action? OnDisconnect;
+
+	private List<ActorEntity> _sceneActors = new List<ActorEntity>();
 
 	public PosingModule(
 		IHookMediator hook,
@@ -46,6 +54,7 @@ public sealed class PosingModule : HookModule {
 		unsafe {
 			_schedulerTimelineVirtualTable = (SchedulerTimeline.SchedulerTimelineVirtualTable*)dpi.GetService<ISigScanner>()?.GetStaticAddressFromSig("48 8D 05 ?? ?? ?? ?? 48 8B D9 ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 93");
 		}
+		this._ctx = contextManager;
 		this.Manager = manager;
 		this._actors = actors;
 		this._ipc = new IpcProvider(contextManager, dpi, fileSerializer);
@@ -58,6 +67,7 @@ public sealed class PosingModule : HookModule {
 	public bool IsEnabled { get; private set; }
 
 	public override void EnableAll() {
+		this._sceneActors = this._ctx.Current!.Scene.Children.OfType<ActorEntity>().ToList();
 		base.EnableAll();
 		this.IsEnabled = true;
 		this._ipc.InvokePosingChanged(this.IsEnabled);
@@ -76,10 +86,14 @@ public sealed class PosingModule : HookModule {
 	
 	[Signature("48 8B C4 48 89 58 18 55 56 57 41 54 41 55 41 56 41 57 48 81 EC ?? ?? ?? ?? 0F 29 70 B8 0F 29 78 A8 44 0F 29 40 ?? 44 0F 29 48 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B B1", DetourName = nameof(SetBoneModelSpace))]
 	private Hook<SetBoneModelSpaceDelegate> _setBoneModelSpaceHook = null!;
-	private delegate ulong SetBoneModelSpaceDelegate(nint partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate);
+	private unsafe delegate ulong SetBoneModelSpaceDelegate(PartialSkeleton* partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate);
 
-	private ulong SetBoneModelSpace(nint partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate) => boneId;
-	
+	private unsafe ulong SetBoneModelSpace(PartialSkeleton* partial, ushort boneId, nint transform, bool enableSecondary, bool enablePropagate) {
+		if(IsActorPaused(partial))
+			return boneId;
+		return this._setBoneModelSpaceHook.Original(partial, boneId, transform, enableSecondary, enablePropagate);
+	}
+
 	// SyncModelSpace
 
 	[Signature("48 83 EC 18 80 79 38 00", DetourName = nameof(SyncModelSpace))]
@@ -87,7 +101,14 @@ public sealed class PosingModule : HookModule {
 	private unsafe delegate void SyncModelSpaceDelegate(hkaPose* pose);
 
 	private unsafe void SyncModelSpace(hkaPose* pose) {
-		if (this.Manager.IsSolvingIk)
+		if (!IsActorPaused(pose)) {
+			var a = this.GetActorForPose(pose);
+			if(a.Any())
+				Ktisis.Log.Debug($"Syncing pose for actor {a.First().Name}");
+			this._syncModelSpaceHook.Original(pose);
+		}
+
+		else if (this.Manager.IsSolvingIk)
 			this._syncModelSpaceHook.Original(pose);
 		
 		// do nothing
@@ -106,13 +127,21 @@ public sealed class PosingModule : HookModule {
 	private Hook<DetourUnknownFunctDelegate> _unknownDetour = null!;
 	private unsafe delegate nint DetourUnknownFunctDelegate(nint a1, nint a2, hkaPose* a3);
 
-	private unsafe nint DetourUnknown(nint a1, nint a2, hkaPose* a3) => (nint)a3->BoneFlags.Data;
-	
+	private unsafe nint DetourUnknown(nint a1, nint a2, hkaPose* a3) {
+		if (IsActorPaused(a3))
+			return (nint)a3->BoneFlags.Data;
+		return this._unknownDetour.Original.Invoke(a1, a2, a3);
+	}
+
 	[Signature("40 53 48 83 EC 10 4C 8B 49 28", DetourName = nameof(CalcBoneModelSpace))]
 	private Hook<CalcBoneModelSpaceDelegate> _calcBoneModelSpaceHook = null!;
 	private unsafe delegate hkQsTransformf* CalcBoneModelSpaceDelegate(hkaPose* pose, int boneIdx);
 
 	private unsafe hkQsTransformf* CalcBoneModelSpace(hkaPose* pose, int boneIdx) {
+		if (IsActorPaused(pose))
+			return pose->ModelPose.Data + boneIdx;
+				
+		return this._calcBoneModelSpaceHook.Original(pose, boneIdx);
 		if (this.Manager.IsSolvingIk)
 			return this._calcBoneModelSpaceHook.Original(pose, boneIdx);
 		
@@ -131,10 +160,12 @@ public sealed class PosingModule : HookModule {
 
 	[Signature("48 8B C4 55 57 48 83 EC 58", DetourName = nameof(KineDriverDetour))]
 	private Hook<KineDriverDelegate> _kineDriverHook = null!;
-	private delegate nint KineDriverDelegate(nint a1, nint a2);
+	private unsafe delegate nint KineDriverDelegate(PartialSkeleton* a1, hkaPose* a2);
 
-	private nint KineDriverDetour(nint a1, nint a2) {
-		return nint.Zero;
+	private unsafe nint KineDriverDetour(PartialSkeleton* a1, hkaPose* a2) {
+		if(IsActorPaused(a1))
+			return nint.Zero;
+		return this._kineDriverHook.Original.Invoke(a1, a2);
 	}
 	
 	// AnimFrozen
@@ -144,10 +175,11 @@ public sealed class PosingModule : HookModule {
 	private unsafe delegate byte AnimFrozenDelegate(nint* a1, int a2);
 
 	private unsafe byte AnimFrozen(nint* a1, int a2) {
+
 		IntPtr vtbl = *a1;
 		if (vtbl == (nint)this._schedulerTimelineVirtualTable) {
 			SchedulerTimeline* timeline = (SchedulerTimeline*)a1;
-			if (this._actors.IsActorGposeActor((ushort)timeline->GetOwningGameObjectIndex()))
+			if (this.IsActorPaused((ushort)timeline->GetOwningGameObjectIndex()))
 				return 1;
 		}
 		return this._animFrozenHook.Original.Invoke(a1, a2);
@@ -157,9 +189,12 @@ public sealed class PosingModule : HookModule {
 
 	[Signature("E8 ?? ?? ?? ?? 84 DB 74 3A", DetourName = nameof(UpdatePosDetour))]
 	private Hook<UpdatePosDelegate> _updatePosHook = null!;
-	private delegate void UpdatePosDelegate(nint gameObject);
+	private unsafe delegate void UpdatePosDelegate(CharacterEx* gameObject);
 
-	private void UpdatePosDetour(nint gameObject) { }
+	private unsafe void UpdatePosDetour(CharacterEx* gameObject) {
+		if(!IsActorPaused(gameObject->Character.ObjectIndex))
+			this._updatePosHook.Original(gameObject);
+	}
 	
 	// Pose preservation handlers
 
@@ -167,6 +202,7 @@ public sealed class PosingModule : HookModule {
 	private Hook<SetSkeletonDelegate> _setSkeletonHook = null!;
 	private unsafe delegate byte SetSkeletonDelegate(Skeleton* skeleton, ushort partialId, nint a3);
 	private unsafe byte SetSkeletonDetour(Skeleton* skeleton, ushort partialId, nint a3) {
+		
 		var result = this._setSkeletonHook.Original(skeleton, partialId, a3);
 		try {
 			this.HandleRestoreState(skeleton, partialId);
@@ -190,7 +226,7 @@ public sealed class PosingModule : HookModule {
 		Ktisis.Log.Verbose($"Restoring partial {partialId} for {actor.Name} ({actor.ObjectIndex})");
 		
 		if (partialId == 0)
-			this._updatePosHook.Original(actor.Address);
+			this._updatePosHook.Original((CharacterEx*)actor.Address);
 		this.OnSkeletonInit?.Invoke(actor, skeleton, partialId);
 	}
 
@@ -206,4 +242,11 @@ public sealed class PosingModule : HookModule {
 		}
 		return this._disconnectHook.Original(a1);
 	}
+
+
+	private unsafe bool IsActorPaused(hkaPose* pose) => this._sceneActors.Any(a => ((SkeletonEx*)a.GetCharacter()->Skeleton)->IsPoseOwnedBy(pose));
+	private unsafe bool IsActorPaused(PartialSkeleton* pose) => this._sceneActors.Any(a => a.GetCharacter() == pose->Skeleton->Owner);
+	private unsafe bool IsActorPaused(ushort index) => this._sceneActors.Any(a => a.CsGameObject->ObjectIndex == index);
+
+	private unsafe IEnumerable<SceneEntity> GetActorForPose(hkaPose* pose) => this._ctx.Current.Scene.Children.OfType<ActorEntity>().Where(a => a.GetHuman()->Skeleton->PartialSkeletons->GetHavokPose(0)->Skeleton == pose->Skeleton);
 }
