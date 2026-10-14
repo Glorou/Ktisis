@@ -11,28 +11,17 @@ using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 
 using Newtonsoft.Json;
-using Dalamud.Plugin.Services;
-
-using FFXIVClientStructs.FFXIV.Client.System.Memory;
-using FFXIVClientStructs.Havok.Animation.Playback;
-using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Common.Utility;
 using Ktisis.Data.Files;
 using Ktisis.Data.Config;
 using Ktisis.Data.Generation;
-using Ktisis.Editor.Animation;
 using Ktisis.Editor.Context.Types;
-using Ktisis.Editor.Posing;
 using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
-using Ktisis.Interop.Hooking;
-using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
-using Ktisis.Scene.Types;
-using Ktisis.Services.Game;
 
 namespace Ktisis.Interface.Windows;
 
@@ -59,12 +48,6 @@ public class DebugWindow : KtisisWindow {
 	private string _boneName = string.Empty;
 	private bool _useWorldSpace = true;
 	private string _batchBoneNames = "j_kao";
-
-	private unsafe hkaAnimatedSkeleton* skel = null;
-	private unsafe hkaAnimatedSkeleton* oldAnim = null;
-	private unsafe hkaPose* newPose = null;
-	private unsafe hkaPose* oldPose = null;
-	
 
 	// ktisis subscriptions
 	private readonly ICallGateSubscriber<(int, int)> _ktisisApiVersion;
@@ -132,7 +115,6 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
 		DrawTab("Expressions", this.DrawExpressionsTab);
-		DrawTab("Havok", this.DrawHavokTab);
 	}
 	private static void DrawTab(string name, Action handler) {
 		using var tab = ImRaii.TabItem(name);
@@ -345,69 +327,27 @@ public class DebugWindow : KtisisWindow {
 			var t = bone.GetTransformModel() ?? new Transform();
 			ImGui.Spacing();
 			ImGui.Text($"Havok (Matrix Decompose / Raw Transform)");
-			ImGui.Text($"Position:\n\tX: {pos.X} / {t.Position.X}\n\tY: {pos.Y} / {t.Position.Y}\n\tZ: {pos.Z} / {t.Position.Z}");
-			ImGui.Text($"Rotation:\n\tX: {rot.X} / {t.Rotation.X}\n\tY: {rot.Y} / {t.Rotation.Y}\n\tZ: {rot.Z} / {t.Rotation.Z}\n\tW: {rot.W} / {t.Rotation.W}");
-			ImGui.Text($"Scale:\n\tX: {scl.X} / {t.Scale.X}\n\tY: {scl.Y} / {t.Scale.Y}\n\tZ: {scl.Z} / {t.Scale.Z}");
-		}
-	}
-	
-	private unsafe void DrawHavokTab() {
-
-		using var _ = ImRaii.Disabled(this._ctx.Selection.Count == 0);
-		if (ImGui.Button("Create new owned HkaPose")) {
-			this.skel = IMemorySpace.GetAnimationSpace()->Malloc<hkaAnimatedSkeleton>();
-			this.oldAnim = (hkaAnimatedSkeleton*)((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokAnimatedSkeletons[0];
-			this.skel->Ctor1(((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->GetHavokPose(0)->Skeleton);
-		}
-		if (this.skel != null) {
-			ImGui.Text($"new pose:{(nint)this.skel:X8}");
-			ImGui.Text($"old pose:{(nint)this.oldPose:X8}");
-			if (ImGui.Button("Overwrite Skeleton")) {
-				var temp = ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons;
-				temp->HavokAnimatedSkeletons[0] = (ulong)this.skel;
-			}
-		}
-		if (ImGui.Button("StartupBlendService")) {
-			this._ctx.Posing.SetuphkaPose((ActorEntity)this._ctx.Selection.GetFirstSelected());
-			//this._ctx.Animation.Setupthatshit((ActorEntity)this._ctx.Selection.GetFirstSelected());
-		}
-		/*
-			if (ImGui.Button("Create new owned HkaPose##a")) {
-				this.newPose = IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
-				this.oldPose = (hkaPose*)((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokPoses[0];
-				this.newPose->Ctor1(hkaPose.PoseSpace.LocalSpace, ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->Skeleton->PartialSkeletons[0].GetHavokPose(0)->Skeleton, &this.newPose->LocalPose);
-			}
-			if (this.newPose != null) {
-				ImGui.Text($"new pose:{(nint)this.skel:X8}");
-				ImGui.Text($"old pose:{(nint)this.oldPose:X8}");
-				if (ImGui.Button("Overwrite Pose")) {
-					var temp = ((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetHuman()->Skeleton->PartialSkeletons->HavokPoses;
-					temp[0] = (ulong)this.newPose;
+			unsafe {
+				if (ImGui.Button("Copy Bone Position Address")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address:X8}");
 				}
-			}*/
-		
-		
-	}
-	
-	
-	
-	private unsafe void CapturePose(ActorEntity actor) {
-		var skele = actor.GetHuman()->Skeleton;
-		var partial = skele->PartialSkeletons[1];
-    
-		var hkAnimSkele = partial.GetHavokAnimatedSkeleton(0);
-		if (hkAnimSkele->AnimationControls.Length == 0)
-			hkAnimSkele = partial.GetHavokAnimatedSkeleton(1);
-		var ctrl = hkAnimSkele->AnimationControls[0].Value;
-		var duration = ctrl->Binding.ptr->Animation.ptr->Duration;
-		ctrl->hkaAnimationControl.Weight = 1.0f;
-		ctrl->hkaAnimationControl.LocalTime = duration;
-                
-		var pose = partial.GetHavokPose(0);
-		hkAnimSkele->sampleAndCombineAnimations(pose->LocalPose.Data, pose->FloatSlotValues.Data);
-		HavokPosing.SyncModelSpace(skele, 1);
+				ImGui.Text($"Position:\n\tX: {pos.X} / {t.Position.X}\n\tY: {pos.Y} / {t.Position.Y}\n\tZ: {pos.Z} / {t.Position.Z}");
+				if (ImGui.Button("Copy Bone Rotation Address (pos+0x10)")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address+0x10:X8}");
+				}
+				ImGui.Text($"Rotation:\n\tX: {rot.X} / {t.Rotation.X}\n\tY: {rot.Y} / {t.Rotation.Y}\n\tZ: {rot.Z} / {t.Rotation.Z}\n\tW: {rot.W} / {t.Rotation.W}");
 
+				if (ImGui.Button("Copy Bone Scale Address (pos+0x20)")) { 
+					var address = bone.GetPose()->ModelPose.Data + bone.Info.BoneIndex;
+					ImGui.SetClipboardText($"{(nint)address+0x20:X8}");
+				}
+				ImGui.Text($"Scale:\n\tX: {scl.X} / {t.Scale.X}\n\tY: {scl.Y} / {t.Scale.Y}\n\tZ: {scl.Z} / {t.Scale.Z}");
+			}
+		}
 	}
+
 	private bool CheckClipboard() {
 		var text = ImGui.GetClipboardText();
         if (text != null) {

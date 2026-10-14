@@ -1,4 +1,7 @@
-﻿using FFXIVClientStructs.Havok.Animation.Rig;
+﻿using Dalamud.Game.ClientState.Objects.Types;
+
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 using Ktisis.Scene.Entities.Game;
 
@@ -9,5 +12,5 @@ public unsafe struct ReplacementPose {
 	public hkaPose* OriginalPose;
 	public ushort PartialIndex;
 	public int BoneCount;
-	public ActorEntity Owner;
+	public CharacterBase* Owner;
 }

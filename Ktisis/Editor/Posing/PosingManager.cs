@@ -141,10 +141,6 @@ public class PosingManager : IPosingManager {
 		}
 
 		this.PoseModule?.SetEnabled(enable);
-		foreach (var actor in this._context.Scene.Children.OfType<ActorEntity>())
-		{
-			this.SetuphkaPose(actor);
-		}
 	}
 
 	public Task SyncFaceModelSpace(ActorEntity actor) {
@@ -359,7 +355,7 @@ public class PosingManager : IPosingManager {
 		});
 	}
 
-	public void SetuphkaPose(ActorEntity actor) => this.PoseModule?.SetupPoseReplacements(actor);
+
 	/*public unsafe void SetupPoseForActor(ActorEntity actor) {
 		var skel = actor.CharacterBaseEx->Base.Skeleton;
 		var partialmap = new Dictionary<ushort, Tuple<nint, nint>>();

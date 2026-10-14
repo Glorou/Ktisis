@@ -30,7 +30,6 @@ public interface IPosingManager : IDisposable {
 	public bool IsEnabled { get; }
 	public bool IsIkEnabled { get; set; }
 	public void SetEnabled(bool enable);
-	public void SetuphkaPose(ActorEntity actor);
 	public Task SyncFaceModelSpace(ActorEntity actor);
 
 	public IIkController CreateIkController();

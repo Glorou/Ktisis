@@ -3,6 +3,7 @@ using System.Numerics;
 
 using FFXIVClientStructs.Havok.Animation.Rig;
 
+using Ktisis.Common.Extensions;
 using Ktisis.Common.Utility;
 using Ktisis.Editor.Posing;
 using Ktisis.Editor.Posing.Attachment;
@@ -34,7 +35,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 	public unsafe override bool IsValid => base.IsValid && this.GetSkeleton() != null && this.GetPose() != null;
 	
-	public unsafe hkaPose* GetPose() => this.Scene.Context.Posing.PoseMap.FirstOrNull(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)) == null ?   this.Pose.GetPose(this.Info.PartialIndex) : this.Scene.Context.Posing.PoseMap.First(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)).Pose;
+	public unsafe hkaPose* GetPose() => this.Scene.Context.Posing.PoseMap.FirstOrNull(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)) == null ? this.Pose.GetPose(this.Info.PartialIndex) : this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose;
 	public unsafe RenderSkeleton* GetSkeleton() => this.Pose.GetSkeleton();
 
 	public bool MatchesId(int pId, int bId) => this.Info.PartialIndex == pId && this.Info.BoneIndex == bId;
@@ -61,7 +62,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 	protected unsafe void SetMatrixWorld(Matrix4x4 matrix) {
 		var skeleton = this.GetSkeleton();
 		 //pose = skeleton != null ? this.GetPose() : null;
-		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner.GetCharacter() == this.GetSkeleton()->Owner) && (r.PartialIndex == this.Info.PartialIndex)).Pose ;
+		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose ;
 		if (pose == null) return;
 		if(this.GetTransformModel() is not Transform transform) return;
 
