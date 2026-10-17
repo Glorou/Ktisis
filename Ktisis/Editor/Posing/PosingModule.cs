@@ -176,7 +176,10 @@ public sealed class PosingModule : HookModule {
 	private unsafe delegate void SyncModelSpacesDelegate(Skeleton* first);
 	private unsafe void SyncModelSpacesDetour(Skeleton* first) {
 		foreach (var pose in this.Poses) {
-			this.OnTick(pose);
+			if (pose.Owner->Skeleton->PartialSkeletons[pose.PartialIndex].HavokPoses.Contains((ulong)pose.OriginalPose))
+				this.OnTick(pose);
+			else
+				this.Poses.Remove(pose);
 		}
 		this._syncModelSpaces.Original.Invoke(first);
 	}
@@ -253,20 +256,18 @@ public sealed class PosingModule : HookModule {
 	public List<ReplacementPose> Poses = new List<ReplacementPose>();
 	public unsafe void SetupPoseReplacements(Skeleton* skeleton) {
 		for (ushort i = 0; i < skeleton->PartialSkeletonCount; i++) {   //((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount
-			if (skeleton->PartialSkeletons[i].HavokPoses[0] != 0) {
-				ReplacementPose toAdd = new ReplacementPose();
-				toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
-				toAdd.OriginalPose = skeleton->PartialSkeletons[i].GetHavokPose(0);
-				HavokEx.Initialize<hkQsTransformf>(&toAdd.Pose->ModelPose, null, toAdd.OriginalPose->ModelPose.Length);
-				toAdd.Pose->Ctor1(hkaPose.PoseSpace.ModelSpace, skeleton->PartialSkeletons[i].GetHavokPose(0)->Skeleton, &toAdd.OriginalPose->ModelPose);
-				toAdd.Owner = skeleton->Owner;
-				toAdd.PartialIndex = i;
-				toAdd.BoneCount = toAdd.Pose->Skeleton->Bones.Length;
-				toAdd.Pose->ModelPose[0] = toAdd.OriginalPose->GetSyncedPoseModelSpace()->Data[0];
-				toAdd.Pose->ModelPose[1] = toAdd.OriginalPose->GetSyncedPoseModelSpace()->Data[1];
-				toAdd.Pose->ModelPose[2] = toAdd.OriginalPose->GetSyncedPoseModelSpace()->Data[2];
-				this.Poses.Add(toAdd);
-			}
+			foreach(hkaPose* pose in skeleton->PartialSkeletons[i].HavokPoses)
+				if ((ulong)pose != 0) {
+					ReplacementPose toAdd = new ReplacementPose();
+					toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
+					toAdd.OriginalPose = pose;
+					HavokEx.Initialize<hkQsTransformf>(&toAdd.Pose->ModelPose, null, toAdd.OriginalPose->ModelPose.Length);
+					toAdd.Pose->Ctor1(hkaPose.PoseSpace.ModelSpace, pose->Skeleton, &toAdd.OriginalPose->ModelPose);
+					toAdd.Owner = skeleton->Owner;
+					toAdd.PartialIndex = i;
+					toAdd.BoneCount = toAdd.Pose->Skeleton->Bones.Length;
+					this.Poses.Add(toAdd);
+				}
 		}
 	}
 

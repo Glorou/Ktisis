@@ -10,6 +10,8 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 
+using FFXIVClientStructs.Havok.Animation.Rig;
+
 using Newtonsoft.Json;
 
 using Ktisis.Common.Utility;
@@ -21,6 +23,7 @@ using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
+using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 
 namespace Ktisis.Interface.Windows;
@@ -30,7 +33,7 @@ public class DebugWindow : KtisisWindow {
 	private readonly GuiManager _gui;
 	private readonly IFramework _framework;
 	private readonly TransformTable _transformTable;
-	
+
 	private readonly FaceLibraryGenerator _faceLibGen;
 
 	// tester inputs
@@ -73,7 +76,7 @@ public class DebugWindow : KtisisWindow {
 		ConfigManager cfg,
 		LocaleManager locale
 	) : base(
-		"Debug Window", windowId:"###KtisisDebug"
+		"Debug Window", windowId: "###KtisisDebug"
 	) {
 		this._ctx = ctx;
 		this._gui = gui;
@@ -97,14 +100,14 @@ public class DebugWindow : KtisisWindow {
 		this._ktisisBatchSetMatrix = dpi.GetIpcSubscriber<uint, Dictionary<string, Matrix4x4>, bool, Task<bool>>("Ktisis.BatchSetMatrix");
 
 		this._transformTable = new TransformTable(cfg, locale);
-		
+
 		// Expression library
 		this._faceLibGen = faceLibGen;
 		this._faceLibGen.Context = this._ctx;
 	}
 
 	public override void Draw() {
-        if (!this._ctx.IsValid) {
+		if (!this._ctx.IsValid) {
 			this.Close();
 			return;
 		}
@@ -115,6 +118,7 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
 		DrawTab("Expressions", this.DrawExpressionsTab);
+		DrawTab("Havok", this.DrawHavokTab);
 	}
 	private static void DrawTab(string name, Action handler) {
 		using var tab = ImRaii.TabItem(name);
@@ -154,18 +158,15 @@ public class DebugWindow : KtisisWindow {
 
 		ImGui.Text("Ktisis.LoadPose");
 		using (ImRaii.Disabled(_gameObjectId < 1 || !_hasClip))
-			if (ImGui.Button("APPLY (Clipboard)##LoadPose"))
-			{
+			if (ImGui.Button("APPLY (Clipboard)##LoadPose")) {
 				_hasClip = CheckClipboard();
-				if (_hasClip)
-				{
+				if (_hasClip) {
 					var applied = await this._ktisisLoadPose.InvokeFunc((uint)_gameObjectId, ImGui.GetClipboardText());
 					if (applied)
 						Ktisis.Log.Debug($"[DEBUG] Loaded clipboard pose to actor {_gameObjectId}");
 					else
 						Ktisis.Log.Warning($"[DEBUG] Failed clipboard pose application to actor {_gameObjectId}");
-				} 
-				else
+				} else
 					Ktisis.Log.Warning("[DEBUG] Clipboard has invalid pose data, cannot apply");
 			}
 		ImGui.Spacing();
@@ -173,8 +174,7 @@ public class DebugWindow : KtisisWindow {
 		// todo: popup bubble with the json output ala glamourer IPC tester
 		ImGui.Text("Ktisis.SavePose");
 		using (ImRaii.Disabled(_gameObjectId < 1))
-			if (ImGui.Button("GET (Clipboard)##SavePose"))
-			{
+			if (ImGui.Button("GET (Clipboard)##SavePose")) {
 				var clip = await this._ktisisSavePose.InvokeFunc((uint)_gameObjectId);
 				ImGui.SetClipboardText(clip);
 				_hasClip = true;
@@ -183,12 +183,10 @@ public class DebugWindow : KtisisWindow {
 		ImGui.Spacing();
 
 		ImGui.Text("Ktisis.SelectedBones");
-		if (ImGui.Button("GET##SelectedBones"))
-		{
+		if (ImGui.Button("GET##SelectedBones")) {
 			var bones = await this._ktisisSelectedBones.InvokeFunc();
 
-			foreach (var (actorId, boneSet) in bones)
-			{
+			foreach (var (actorId, boneSet) in bones) {
 				Ktisis.Log.Debug($"[DEBUG] Actor {actorId} selected bones: {string.Join(", ", boneSet)}");
 			}
 		}
@@ -203,17 +201,13 @@ public class DebugWindow : KtisisWindow {
 
 		ImGui.InputText("Bone Name", ref _boneName, 64);
 
-		using (ImRaii.Disabled(_gameObjectId < 1 || string.IsNullOrEmpty(_boneName)))
-		{
-			if (ImGui.Button("GET##GetBoneTransform"))
-			{
+		using (ImRaii.Disabled(_gameObjectId < 1 || string.IsNullOrEmpty(_boneName))) {
+			if (ImGui.Button("GET##GetBoneTransform")) {
 				var matrix = await this._ktisisGetMatrix.InvokeFunc((uint)_gameObjectId, _boneName, _useWorldSpace);
-				if (matrix != null)
-				{
+				if (matrix != null) {
 					_transform = new Transform(matrix.Value);
 					Ktisis.Log.Debug($"[DEBUG] Got matrix for bone {_boneName} on actor {_gameObjectId}");
-				} else
-				{
+				} else {
 					Ktisis.Log.Warning($"[DEBUG] Failed to get matrix for bone {_boneName} on actor {_gameObjectId}");
 				}
 			}
@@ -222,15 +216,11 @@ public class DebugWindow : KtisisWindow {
 			if (this._transformTable.Draw(_transform, out var result, TransformTableFlags.Default | TransformTableFlags.Operation))
 				_transform = result;
 
-			if (ImGui.Button("SET##SetBoneTransform"))
-			{
+			if (ImGui.Button("SET##SetBoneTransform")) {
 				var success = await this._ktisisSetMatrix.InvokeFunc((uint)_gameObjectId, _boneName, _transform.ComposeMatrix(), _useWorldSpace);
-				if (success)
-				{
+				if (success) {
 					Ktisis.Log.Debug($"[DEBUG] Set matrix for bone {_boneName} on actor {_gameObjectId}");
-				}
-				else
-				{
+				} else {
 					Ktisis.Log.Warning($"[DEBUG] Failed to set matrix for bone {_boneName} on actor {_gameObjectId}");
 				}
 			}
@@ -238,16 +228,12 @@ public class DebugWindow : KtisisWindow {
 		ImGui.Spacing();
 		ImGui.Text("Batch Operations");
 		ImGui.InputText("Batch Names", ref _batchBoneNames, 256);
-		using (ImRaii.Disabled(_gameObjectId < 1 || string.IsNullOrEmpty(_batchBoneNames)))
-		{
-			if (ImGui.Button("Batch GET"))
-			{
+		using (ImRaii.Disabled(_gameObjectId < 1 || string.IsNullOrEmpty(_batchBoneNames))) {
+			if (ImGui.Button("Batch GET")) {
 				var names = _batchBoneNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 				var results = await _ktisisBatchGetMatrix.InvokeFunc((uint)_gameObjectId, names, _useWorldSpace);
-				if (results != null)
-				{
-					foreach (var kvp in results)
-					{
+				if (results != null) {
+					foreach (var kvp in results) {
 						Ktisis.Log.Debug($"[DEBUG] Batch Get {kvp.Key}: {(kvp.Value.HasValue ? kvp.Value.Value.ToString() : "null")}");
 					}
 				}
@@ -256,8 +242,7 @@ public class DebugWindow : KtisisWindow {
 			// Uses current transform for all bones, probably better to do it some other way but idk how rn
 			ImGui.SameLine();
 
-			if (ImGui.Button("Batch SET (Current Transform)"))
-			{
+			if (ImGui.Button("Batch SET (Current Transform)")) {
 				var names = _batchBoneNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 				var dict = new Dictionary<string, Matrix4x4>();
 				var mat = _transform.ComposeMatrix();
@@ -268,20 +253,15 @@ public class DebugWindow : KtisisWindow {
 			}
 
 			ImGui.Spacing();
-			if (ImGui.Button("Get All Matrices"))
-			{
+			if (ImGui.Button("Get All Matrices")) {
 				var matrices = await _ktisisGetAllMatrices.InvokeFunc((uint)_gameObjectId, _useWorldSpace);
-				if (matrices != null)
-				{
+				if (matrices != null) {
 					Ktisis.Log.Debug($"[DEBUG] GetAllMatrices returned {matrices.Count} entries.");
-					foreach (var (name, matrix) in matrices)
-					{
+					foreach (var (name, matrix) in matrices) {
 						var val = matrix.HasValue ? matrix.Value.ToString() : "null";
 						Ktisis.Log.Debug($"[DEBUG] {name}: {val}");
 					}
-				} 
-				else
-				{
+				} else {
 					Ktisis.Log.Warning("[DEBUG] GetAllMatrices returned null.");
 				}
 			}
@@ -292,6 +272,39 @@ public class DebugWindow : KtisisWindow {
 		ImGui.Text("TODO");
 	}
 
+	private unsafe void DrawHavokTab() {
+		var selection = this._ctx.Selection.GetFirstSelected();
+		if (selection is ActorEntity actor && actor.GetHuman()->Skeleton != null) {
+			var sk = actor.GetHuman()->Skeleton;
+			for (var i = 0; i < sk->PartialSkeletonCount; i++) {
+				if(sk->PartialSkeletons[i].HavokPoses.ContainsAnyExcept((ulong)0))
+					if (ImGui.CollapsingHeader($"{GetPartialName(i)}")) {
+						
+						if(sk->SkeletonResourceHandles[i] != null)
+							ImGui.Text($"Loaded from: {sk->SkeletonResourceHandles[i]->FileName}");
+						foreach (hkaPose* pose in sk->PartialSkeletons[i].HavokPoses) {
+							if (pose != null) {
+								ImGui.Text($"Pose Address: {(nint)pose:X8} ");
+								ImGui.SameLine();
+								if (ImGui.Button("Copy")) {
+									ImGui.SetClipboardText($"{(nint)pose:X8}");
+								}
+							}
+						}
+					}
+					
+			}
+		}
+		ImGui.Text("TODO");
+	}
+
+	private string GetPartialName(int a) => a switch {
+		0 => "Body",
+		1 => "Face",
+		2 => "Hair Extras",
+		_ => "Unknown"
+	};
+	
 	private void DrawDiagnosticsTab() {
 		// existing debug text from overlay
 		var overlay = this._gui.Get<OverlayWindow>();
