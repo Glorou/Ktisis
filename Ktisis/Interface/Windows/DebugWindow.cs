@@ -26,6 +26,7 @@ using Ktisis.Interface.Overlay;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Scene.Entities.Skeleton.Constraints;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Interface.Windows;
 
@@ -300,7 +301,7 @@ public class DebugWindow : KtisisWindow {
 	private BoneNode? EndBone;
 	private unsafe void DrawIkTab() {
 		var selection = this._ctx.Selection.GetFirstSelected();
-
+		
 		if (selection is BoneNode bone) {
 			if (ImGui.Button("Set Start Bone")) {
 				this.StartBone = bone;
@@ -312,6 +313,9 @@ public class DebugWindow : KtisisWindow {
 		if (this.EndBone != null && this.StartBone != null && this.EndBone.IsBoneDescendantOf(this.StartBone)) {
 			EntityPose? pose = ((ActorEntity)this.StartBone.Root).Pose;
 			if (ImGui.Button("Create CCD Chain")) {
+				if(pose.IkController.GroupCount == 0)
+					pose.IkController.Setup(pose);
+				
 				CcdGroupParams newGroup = new CcdGroupParams()
 				{
 					StartBone = new List<string>(){this.StartBone.Name},
