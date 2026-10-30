@@ -15,6 +15,8 @@ using Ktisis.Interop;
 using Ktisis.Interop.Hooking;
 using Ktisis.Structs.Havok;
 
+using hkQsTransformf = FFXIVClientStructs.Havok.Common.Base.Math.QsTransform.hkQsTransformf;
+
 namespace Ktisis.Editor.Posing.Ik;
 
 public sealed class IkModule : HookModule {

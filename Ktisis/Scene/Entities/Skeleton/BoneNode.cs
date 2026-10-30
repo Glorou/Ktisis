@@ -18,6 +18,7 @@ namespace Ktisis.Scene.Entities.Skeleton;
 public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 	public PartialBoneInfo Info;
 	public uint PartialId;
+
 	
 	public bool Visible { get; set; }
 
@@ -35,7 +36,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 	public unsafe override bool IsValid => base.IsValid && this.GetSkeleton() != null && this.GetPose() != null;
 	
-	public unsafe hkaPose* GetPose() => this.Scene.Context.Posing.PoseMap.FirstOrNull(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)) == null ? this.Pose.GetPose(this.Info.PartialIndex) : this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose;
+	public unsafe hkaPose* GetPose() => this.Pose.GetPose(this.Info.PartialIndex);
 	public unsafe RenderSkeleton* GetSkeleton() => this.Pose.GetSkeleton();
 
 	public bool MatchesId(int pId, int bId) => this.Info.PartialIndex == pId && this.Info.BoneIndex == bId;
@@ -52,18 +53,44 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 		if (skeleton == null || this.GetMatrixModel() is not Matrix4x4 matrix)
 			return null;
 
-		var model = new Transform(skeleton->Transform);
+		Transform model;
+		if (this.Scene.Context.Posing.PoseMap.Exists(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex))) {
+			var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex));
+			model = Transform.setMul(new Transform(skeleton->Transform), pose.Pose[this.Info.BoneIndex])!;
+		} else {
+			model = new Transform(skeleton->Transform);
+		}
+
+		
+
 		matrix.Translation *= model.Scale;
 		matrix = Matrix4x4.Transform(matrix, model.Rotation);
 		matrix.Translation += model.Position;
 		return matrix;
 	}
 
-	protected unsafe void SetMatrixWorld(Matrix4x4 matrix) {
+	protected unsafe void SetMatrixWorld(Matrix4x4 transform) {
+		Transform a = new Transform();
+		a.DecomposeMatrix(transform);
+		SetMatrixWorld(a);
+
+	}
+	protected unsafe void SetMatrixWorld(Transform transform) {
 		var skeleton = this.GetSkeleton();
 		 //pose = skeleton != null ? this.GetPose() : null;
-		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose ;
-		if (pose == null) return;
+		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex));
+
+		var m = this.CalcTransformWorld();
+		if (pose.OriginalPose == null || m == null) return;
+		
+		var o = Transform.setMulInverseMul(m, transform);
+		
+
+
+		pose.Pose[this.Info.BoneIndex] = o;
+
+		/*
+
 		if(this.GetTransformModel() is not Transform transform) return;
 
 		var model = new Transform(skeleton->Transform);
@@ -73,11 +100,11 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 
 
-		HavokPosing.SetModelTransform(pose, this.Info.BoneIndex, new Transform(matrix, transform));
+		HavokPosing.SetModelTransform(pose, this.Info.BoneIndex, new Transform(matrix, transform));*/
 	}
 
 	protected void SetTransformWorld(Transform transform)
-		=> this.SetMatrixWorld(transform.ComposeMatrix());
+		=> this.SetMatrixWorld(transform);
 
 	public Transform? CalcTransformWorld() {
 		var matrix = this.CalcMatrixWorld();
@@ -85,6 +112,49 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 		return new Transform(matrix.Value, transform);
 	}
 
+	
+	
+	#if DEBUG
+	public int poseId;
+	public unsafe Matrix4x4? GetMatrixModelDebug(int i) {
+		var pose = this.GetSkeleton()->PartialSkeletons[this.Info.PartialIndex].GetHavokPose(i);
+		this.poseId = i;
+		if(pose->ModelInSync == 0x0)
+			pose->SyncModelSpace();
+		return pose != null ? HavokPosing.GetMatrix(pose, this.Info.BoneIndex) : null;
+	}
+	
+	protected unsafe Matrix4x4? CalcMatrixWorldDebug(int i) {
+		var skeleton = this.GetSkeleton();
+		if (skeleton == null || this.GetMatrixModelDebug(i) is not Matrix4x4 matrix)
+			return null;
+
+		var model = new Transform(skeleton->Transform);
+		matrix.Translation *= model.Scale;
+		matrix = Matrix4x4.Transform(matrix, model.Rotation);
+		matrix.Translation += model.Position;
+		return matrix;
+	}
+	
+	public Transform? CalcTransformWorldDebug(int i) {
+		var matrix = this.CalcMatrixWorldDebug(i);
+		if (matrix is null || this.GetTransformModel() is not Transform transform) return null;
+		return new Transform(matrix.Value, transform);
+	}
+	
+	public Transform? CalcTransformOverlayDebug(int i) {
+		var transform = this.CalcTransformWorldDebug(i);
+		if (transform is null) return null;
+
+		var offset = this.Scene.Context.Config.Offsets.GetOffset(this);
+		if (offset is not null) {
+			var offsetTransformed = Vector3.Transform((Vector3)offset, transform.Rotation);
+			transform.Position += offsetTransformed;
+		}
+
+		return transform;
+	}
+	#endif
 	public Transform? CalcTransformOverlay() {
 		var transform = this.CalcTransformWorld();
 		if (transform is null) return null;
@@ -165,7 +235,11 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 	
 	// ITransform
 
-	public virtual Transform? GetTransform() => this.CalcTransformWorld();
+	public unsafe virtual Transform? GetTransform() {
+		if (this.Scene.Context.Posing.PoseMap.Exists(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)))
+			return Transform.setMul(this.CalcTransformWorld(), this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose[this.Info.BoneIndex]);
+		return this.CalcTransformWorld();
+	} 
 	public virtual void SetTransform(Transform transform) => this.SetTransformWorld(transform);
 
 	public virtual Matrix4x4? GetMatrix() => this.CalcMatrixWorld();

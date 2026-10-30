@@ -12,6 +12,8 @@ using Dalamud.Plugin.Services;
 
 using FFXIVClientStructs.Havok.Animation.Rig;
 
+using Ktisis.Common.Extensions;
+
 using Newtonsoft.Json;
 
 using Ktisis.Common.Utility;
@@ -25,6 +27,7 @@ using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
 
 namespace Ktisis.Interface.Windows;
 
@@ -35,6 +38,8 @@ public class DebugWindow : KtisisWindow {
 	private readonly TransformTable _transformTable;
 
 	private readonly FaceLibraryGenerator _faceLibGen;
+
+	public bool DebugSkeletons;
 
 	// tester inputs
 	private int _gameObjectId;
@@ -274,30 +279,55 @@ public class DebugWindow : KtisisWindow {
 
 	private unsafe void DrawHavokTab() {
 		var selection = this._ctx.Selection.GetFirstSelected();
+		if (selection?.Type != EntityType.Actor)
+			selection = this._ctx.Scene.Recurse().OfType<ActorEntity>().FirstOrDefault(a => a.Actor.GetSkeleton() != null);
+
+		ImGui.Checkbox("Render Debug Skeleton", ref this.DebugSkeletons);
 		if (selection is ActorEntity actor && actor.GetHuman()->Skeleton != null) {
+			ImGui.Text($"Targeting {actor.Name}");
 			var sk = actor.GetHuman()->Skeleton;
 			for (var i = 0; i < sk->PartialSkeletonCount; i++) {
 				if(sk->PartialSkeletons[i].HavokPoses.ContainsAnyExcept((ulong)0))
 					if (ImGui.CollapsingHeader($"{GetPartialName(i)}")) {
-						
+						ImGui.Text($"Connected Bone Index: {(nint)sk->PartialSkeletons[i].ConnectedBoneIndex:X8}");
 						if(sk->SkeletonResourceHandles[i] != null)
 							ImGui.Text($"Loaded from: {sk->SkeletonResourceHandles[i]->FileName}");
+						ImGui.Indent();
 						foreach (hkaPose* pose in sk->PartialSkeletons[i].HavokPoses) {
 							if (pose != null) {
+								ImGui.Separator();
+								ImGui.Text($"Pose {sk->PartialSkeletons[i].HavokPoses.IndexOf((ulong)pose)}");
 								ImGui.Text($"Pose Address: {(nint)pose:X8} ");
 								ImGui.SameLine();
-								if (ImGui.Button("Copy")) {
+								if (ImGui.Button($"Copy##{(nint)pose}")) {
 									ImGui.SetClipboardText($"{(nint)pose:X8}");
 								}
+								if (ImGui.CollapsingHeader($"Connected Bone Info##{(nint)pose}")) {
+									if(sk->PartialSkeletons[i].ConnectedBoneIndex < pose->Skeleton->Bones.Length)
+										PrintSRT(pose, sk->PartialSkeletons[i].ConnectedBoneIndex);
+									else 
+										PrintSRT(pose, 1);
+								}
+									
+
+
 							}
 						}
+						ImGui.Unindent();
 					}
 					
 			}
 		}
-		ImGui.Text("TODO");
 	}
 
+	private unsafe void PrintSRT(hkaPose* pose, int id) {
+		var local = pose->LocalPose.Data + id;
+		var model = pose->ModelPose.Data + id;
+		ImGui.Text($"Local in Sync: {pose->LocalInSync} Model in Sync: {pose->ModelInSync}");
+		ImGui.Text($"Position:\n\tX: {local->Translation.X} / {model->Translation.X}\n\tY: {local->Translation.Y} / {model->Translation.Y}\n\tZ: {local->Translation.Z} / {model->Translation.Z}");
+		ImGui.Text($"Rotation:\n\tX: {local->Rotation.X} / {model->Rotation.X}\n\tY: {local->Rotation.Y} / {model->Rotation.Y}\n\tZ: {local->Rotation.Z} / {model->Rotation.Z}\n\tW: {local->Rotation.W} / {model->Rotation.W}");
+		ImGui.Text($"Scale:\n\tX: {local->Scale.X} / {model->Scale.X}\n\tY: {local->Scale.Y} / {model->Scale.Y}\n\tZ: {local->Scale.Z} / {model->Scale.Z}");
+	}
 	private string GetPartialName(int a) => a switch {
 		0 => "Body",
 		1 => "Face",

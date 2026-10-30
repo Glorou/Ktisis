@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
@@ -22,6 +24,7 @@ using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Services.Game;
+using Ktisis.Structs.Havok;
 using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Editor.Posing;
@@ -135,9 +138,7 @@ public sealed class PosingModule : HookModule {
 	private Hook<KineDriverDelegate> _kineDriverHook = null!;
 	private delegate nint KineDriverDelegate(nint a1, nint a2);
 
-	private nint KineDriverDetour(nint a1, nint a2) {
-		return nint.Zero;
-	}
+	private nint KineDriverDetour(nint a1, nint a2) => this._kineDriverHook.Original.Invoke(a1, a2);
 	
 	// AnimFrozen
 
@@ -175,6 +176,19 @@ public sealed class PosingModule : HookModule {
 
 	private unsafe delegate void SyncModelSpacesDelegate(Skeleton* first);
 	private unsafe void SyncModelSpacesDetour(Skeleton* first) {
+		if (first == null) {
+			this._syncModelSpaces.Original.Invoke(first);
+			return;
+		}
+		this._syncModelSpaces.Original.Invoke(first);
+		Skeleton* ptr = first;
+		List<ulong> skeletons = new List<ulong>();
+		do {
+			skeletons.Add((ulong)ptr);
+			Ktisis.Log.Debug($"{(ulong)ptr}");
+			ptr = ptr->LinkedListNext;
+		} while (ptr != null);
+
 		foreach (var pose in this.Poses) {
 			if (pose.Owner->Skeleton->PartialSkeletons[pose.PartialIndex].HavokPoses.Contains((ulong)pose.OriginalPose))
 				this.OnTick(pose);
@@ -219,6 +233,15 @@ public sealed class PosingModule : HookModule {
 
 	public unsafe void OnTick(ReplacementPose replacementPose) {
 		
+		for (var i = 0; i < replacementPose.BoneCount; i++) {
+			hkQsTransformf* ptr = replacementPose.OriginalPose->ModelPose.Data + i;
+			if(ptr != null && replacementPose.Pose.Length > i)
+				*ptr = Transform.setMul(*ptr,replacementPose.Pose[i]);
+		}
+
+		
+		
+		/*
 		float* alpha = stackalloc float[1];
 		float* weightsR = stackalloc float[replacementPose.BoneCount];
 		float* weightsL = stackalloc float[replacementPose.BoneCount];
@@ -230,7 +253,7 @@ public sealed class PosingModule : HookModule {
 			/*bool isSame = false;
 			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Rotation.ToQuaternion() == replacementPose.Pose->LocalPose.Data[i].Rotation.ToQuaternion();
 			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Translation.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Translation.ToVector3();
-			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Scale.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Scale.ToVector3();*/
+			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Scale.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Scale.ToVector3();
 			weightsR[i] = 1f;
 		}
 		var pid = replacementPose.Owner->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedParentBoneIndex;
@@ -240,37 +263,62 @@ public sealed class PosingModule : HookModule {
 			var o =  replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[0].GetHavokPose(0)->AccessBoneModelSpace(pid, hkaPose.PropagateOrNot.Propagate);
 			r->Rotation = o->Rotation;
 			r->Scale = o->Scale;
-			r->Translation = o->Translation;*/
+			r->Translation = o->Translation;
 			weightsR[replacementPose.Owner->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedBoneIndex] = 0f;
 		}
 		//replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[0];
 		/*Transform temp = new Transform();
 		temp.DecomposeMatrix(HavokPosing.GetMatrix(replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data));
 		temp.Position.X += 1;
-		var matrix = temp.ComposeMatrix();
-		HavokPosing.SetMatrix(replacementPose.Pose->LocalPose.Data, matrix);*/
+		var matrix = temp.ComposeMatrix()
 		//set the root to be the same
-		this._hkaBlend.Invoke(replacementPose.OriginalPose->ModelPose.Data, weightsOut, replacementPose.OriginalPose->ModelPose.Data ,weightsL,  replacementPose.Pose->ModelPose.Data, weightsR, alpha, replacementPose.BoneCount, BLEND_MODE.NORMAL, 0x0);
+		this._hkaBlend.Invoke(replacementPose.OriginalPose->ModelPose.Data, weightsOut, replacementPose.OriginalPose->ModelPose.Data ,weightsL,  replacementPose.Pose->ModelPose.Data, weightsR, alpha, replacementPose.BoneCount, BLEND_MODE.NORMAL, 0x0);*/
 
+	}
+	
+	public unsafe static Transform[] GetModelSpaceReferencePose(hkaPose* inPose) {
+		var skele = inPose->Skeleton;
+		var boneCt = skele->Bones.Length;
+    
+		var result = new Transform[boneCt];
+		result[0] = new Transform(inPose->ModelPose[0]);
+
+		for (var i = 1; i < boneCt; i++) {
+			var parentId = skele->ParentIndices[i];
+			if (parentId == -1) continue; // shouldn't happen
+
+			var parent = result[parentId];
+			var local = new Transform(skele->ReferencePose[i]);
+			result[i] = new Transform(
+				parent.Position + Vector3.Transform(local.Position, parent.Rotation),
+				parent.Rotation * local.Rotation,
+				local.Scale // unsure, verify this
+			);
+		}
+    
+		return result;
 	}
 	public List<ReplacementPose> Poses = new List<ReplacementPose>();
 	public unsafe void SetupPoseReplacements(Skeleton* skeleton) {
 		for (ushort i = 0; i < skeleton->PartialSkeletonCount; i++) {   //((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount
-			foreach(hkaPose* pose in skeleton->PartialSkeletons[i].HavokPoses)
-				if ((ulong)pose != 0) {
-					ReplacementPose toAdd = new ReplacementPose();
-					toAdd.Pose =  IMemorySpace.GetAnimationSpace()->Malloc<hkaPose>();
-					toAdd.OriginalPose = pose;
-					HavokEx.Initialize<hkQsTransformf>(&toAdd.Pose->ModelPose, null, toAdd.OriginalPose->ModelPose.Length);
-					toAdd.Pose->Ctor1(hkaPose.PoseSpace.ModelSpace, pose->Skeleton, &toAdd.OriginalPose->ModelPose);
-					toAdd.Owner = skeleton->Owner;
-					toAdd.PartialIndex = i;
-					toAdd.BoneCount = toAdd.Pose->Skeleton->Bones.Length;
-					this.Poses.Add(toAdd);
-				}
+			hkaPose* pose = skeleton->PartialSkeletons[i].GetHavokPose(0);
+			if ((ulong)pose != 0) {
+				ReplacementPose toAdd = new ReplacementPose();
+				var p =  new Transform[pose->Skeleton->Bones.Length];
+				for(var j = 0; j < pose->Skeleton->Bones.Length; j++)
+					p[j] = new Transform();
+
+				toAdd.Pose = p;
+				toAdd.OriginalPose = pose;
+				toAdd.Owner = skeleton->Owner;
+				toAdd.PartialIndex = i;
+				toAdd.BoneCount = toAdd.OriginalPose->Skeleton->Bones.Length;
+				this.Poses.Add(toAdd);
+			}
 		}
 	}
 
+	
 
 	private unsafe void HandleRestoreState(Skeleton* skeleton, ushort partialId) {
 		if (!this.Manager.IsValid || !this.IsEnabled || skeleton->PartialSkeletons == null) return;

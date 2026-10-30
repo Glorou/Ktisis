@@ -29,10 +29,18 @@ public class Configuration : IPluginConfiguration {
 
 	public EntityDisplay GetEntityDisplay(SceneEntity entity) {
 		var display = this.Editor.GetDisplayForType(entity.Type);
+		#if DEBUG
+		return entity switch {
+			BoneNodeGroup { Category: { } category } => display with { Color = category.GroupColor },
+			BoneNode { Parent: BoneNodeGroup { Category: { } category } } => display with { Color = category.LinkedColors ? category.GroupColor : uint.CreateTruncating(category.BoneColor * (((BoneNode)entity).poseId + 1)* 0x123456)  },
+			_ => display
+		};
+		#else
 		return entity switch {
 			BoneNodeGroup { Category: { } category } => display with { Color = category.GroupColor },
 			BoneNode { Parent: BoneNodeGroup { Category: { } category } } => display with { Color = category.LinkedColors ? category.GroupColor : category.BoneColor },
 			_ => display
 		};
+		#endif
 	}
 }

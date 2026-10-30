@@ -11,6 +11,8 @@ using Dalamud.Utility;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using FFXIVClientStructs.Havok.Animation.Rig;
+
 using CSGameObject = FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject;
 
 using Ktisis.Common.Extensions;
@@ -20,6 +22,7 @@ using Ktisis.Data.Config.Sections;
 using Ktisis.Editor.Camera.Types;
 using Ktisis.Editor.Context.Types;
 using Ktisis.Interface.Editor.Popup;
+using Ktisis.Interface.Windows;
 using Ktisis.Scene.Decor;
 using Ktisis.Scene.Entities;
 using Ktisis.Scene.Entities.Game;
@@ -100,6 +103,12 @@ public class SceneDraw {
 		foreach (var entity in entities) {
 			switch (entity) {
 				case EntityPose pose:
+					#if DEBUG
+					if (this._ctx.Plugin.Gui.Get<DebugWindow>()?.DebugSkeletons == true) {
+						this.DrawSkeletonDebug(frame, pose);
+						continue;
+					}
+					#endif
 					this.DrawSkeleton(frame, pose);
 					continue;
 				case IVisibility { Visible: true } and ITransform manip:
@@ -173,6 +182,69 @@ public class SceneDraw {
 					this.DrawLine(camera, drawList, transform.Position, lineTo.Position, display.Color, opacity);
 				}
 			}
+		}
+	}
+	
+	private unsafe void DrawSkeletonDebug(ISelectableFrame frame, EntityPose pose) {
+		if (!pose.ShouldDraw() && !this.Config.BulkVisOverride) return;
+
+		var skeleton = pose.GetSkeleton();
+		if (skeleton == null || skeleton->PartialSkeletons == null) return;
+
+		var camera = CameraService.GetSceneCamera();
+		if (camera == null) return;
+
+		var drawList = ImGui.GetWindowDrawList();
+
+		float? opacity = null;
+		if (pose.Parent is ActorEntity actor)
+			opacity = this.GetOpacityMultiplier(actor);
+
+		var partialCt = skeleton->PartialSkeletonCount;
+		for (var index = 0; index < partialCt; index++) {
+			var partial = skeleton->PartialSkeletons[index];
+
+			for(var id = 0; id < 4; id ++ ) {
+				hkaPose* hkaPose = (hkaPose*)skeleton->PartialSkeletons[index].HavokPoses[id];
+					if (hkaPose == null || hkaPose->Skeleton == null)
+						continue;
+
+					var hkaSkeleton = hkaPose->Skeleton;
+					var boneCt = hkaSkeleton->Bones.Length;
+
+					for (var i = 0; i < boneCt; i++) {
+						var node = pose.GetBoneFromMap(index, i);
+						if (node?.Visible != true && !this.Config.BulkVisOverride) continue;
+
+						var transform = node?.CalcTransformOverlayDebug(id);
+						if (transform == null || node == null) continue;
+				
+						if (opacity is not null)
+							frame.AddItem(node, transform.Position, this._ctx, opacity.Value);
+						else
+							frame.AddItem(node, transform.Position, this._ctx);
+				
+						// Draw lines to children.
+
+						if (!this.Config.DrawLines) continue;
+						if (!this.Config.DrawLinesGizmo && ImGuizmo.IsUsing()) continue;
+
+						for (var c = i; c < boneCt; c++) {
+							if (hkaSkeleton->ParentIndices[c] != i) continue;
+
+							var bone = pose.GetBoneFromMap(index, c);
+							if (bone?.Visible != true && !this.Config.BulkVisOverride) continue;
+
+							var lineTo = bone?.CalcTransformOverlayDebug(id);
+							if (lineTo == null) continue;
+
+							var display = this._ctx.Config.GetEntityDisplay(node);
+							this.DrawLine(camera, drawList, transform.Position, lineTo.Position, display.Color, opacity);
+						}
+					}
+				
+			}
+
 		}
 	}
 	
