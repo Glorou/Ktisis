@@ -23,6 +23,7 @@ using Ktisis.Editor.Context;
 using Ktisis.Interop.Hooking;
 using Ktisis.Interop.Ipc;
 using Ktisis.Scene.Entities.Game;
+using Ktisis.Scene.Entities.Skeleton;
 using Ktisis.Services.Game;
 using Ktisis.Structs.Havok;
 using Ktisis.Structs.Helpers;
@@ -59,10 +60,6 @@ public sealed class PosingModule : HookModule {
 	public unsafe override void EnableAll() {
 		base.EnableAll();
 		this.IsEnabled = true;
-		foreach (var gPoseActor in this._actors.GetGPoseActors())
-		{
-			this.SetupPoseReplacements(gPoseActor.GetSkeleton());
-		}
 
 		this._ipc.InvokePosingChanged(this.IsEnabled);
 	}
@@ -93,8 +90,6 @@ public sealed class PosingModule : HookModule {
 	private unsafe void SyncModelSpace(hkaPose* pose) {
 		if (this.Manager.IsSolvingIk)
 			this._syncModelSpaceHook.Original(pose);
-		if(this.Poses.Any(p => p.OriginalPose == pose))
-			this.OnTick(this.Poses.First(p => p.OriginalPose == pose));
 		// do nothing
 	}
 
@@ -180,21 +175,12 @@ public sealed class PosingModule : HookModule {
 			this._syncModelSpaces.Original.Invoke(first);
 			return;
 		}
-		this._syncModelSpaces.Original.Invoke(first);
-		Skeleton* ptr = first;
-		List<ulong> skeletons = new List<ulong>();
-		do {
-			skeletons.Add((ulong)ptr);
-			Ktisis.Log.Debug($"{(ulong)ptr}");
-			ptr = ptr->LinkedListNext;
-		} while (ptr != null);
 
-		foreach (var pose in this.Poses) {
-			if (pose.Owner->Skeleton->PartialSkeletons[pose.PartialIndex].HavokPoses.Contains((ulong)pose.OriginalPose))
-				this.OnTick(pose);
-			else
-				this.Poses.Remove(pose);
-		}
+
+
+		foreach (var pose in this.Manager._context.Scene.Recurse().OfType<EntityPose>())
+			foreach (var replacement in pose.Transforms) 
+				this.OnTick(replacement.Value);
 		this._syncModelSpaces.Original.Invoke(first);
 	}
 	/*[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 49 8B F8")]
@@ -298,32 +284,14 @@ public sealed class PosingModule : HookModule {
     
 		return result;
 	}
-	public List<ReplacementPose> Poses = new List<ReplacementPose>();
-	public unsafe void SetupPoseReplacements(Skeleton* skeleton) {
-		for (ushort i = 0; i < skeleton->PartialSkeletonCount; i++) {   //((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount
-			hkaPose* pose = skeleton->PartialSkeletons[i].GetHavokPose(0);
-			if ((ulong)pose != 0) {
-				ReplacementPose toAdd = new ReplacementPose();
-				var p =  new Transform[pose->Skeleton->Bones.Length];
-				for(var j = 0; j < pose->Skeleton->Bones.Length; j++)
-					p[j] = new Transform();
 
-				toAdd.Pose = p;
-				toAdd.OriginalPose = pose;
-				toAdd.Owner = skeleton->Owner;
-				toAdd.PartialIndex = i;
-				toAdd.BoneCount = toAdd.OriginalPose->Skeleton->Bones.Length;
-				this.Poses.Add(toAdd);
-			}
-		}
-	}
+
 
 	
 
 	private unsafe void HandleRestoreState(Skeleton* skeleton, ushort partialId) {
 		if (!this.Manager.IsValid || !this.IsEnabled || skeleton->PartialSkeletons == null) return;
-
-		this.SetupPoseReplacements(skeleton);
+		
 		
 		var partial = skeleton->PartialSkeletons[partialId];
 		var pose = partial.GetHavokPose(0);

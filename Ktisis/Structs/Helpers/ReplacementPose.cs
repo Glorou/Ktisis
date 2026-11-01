@@ -7,6 +7,7 @@ using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 using Ktisis.Common.Utility;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Common.Extensions;
+using Ktisis.Scene.Entities.Skeleton;
 
 namespace Ktisis.Structs.Helpers;
 
@@ -15,6 +16,6 @@ public unsafe struct ReplacementPose {
 	public hkaPose* OriginalPose;
 	public ushort PartialIndex;
 	public int BoneCount;
-	public CharacterBase* Owner;
+	public EntityPose Owner;
 	
 }

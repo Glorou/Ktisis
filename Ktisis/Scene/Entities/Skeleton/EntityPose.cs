@@ -17,6 +17,7 @@ using Ktisis.Scene.Entities.Character;
 using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Factory.Builders;
 using Ktisis.Scene.Types;
+using Ktisis.Structs.Helpers;
 
 namespace Ktisis.Scene.Entities.Skeleton;
 
@@ -25,6 +26,10 @@ public class EntityPose : SkeletonGroup, ISkeleton, IConfigurable {
 	
 	public readonly IIkController IkController;
 	public readonly IExpressionController Expressions;
+
+	public Dictionary<int, ReplacementPose> Transforms = new Dictionary<int, ReplacementPose>();
+		
+
 	
 	public EntityPose(
 		ISceneManager scene,
@@ -113,7 +118,8 @@ public class EntityPose : SkeletonGroup, ISkeleton, IConfigurable {
 		this.BuildBoneMap(index, id);
 		if (this.Scene.Context.Posing.IsEnabled)
 			this.Scene.Context.Posing.ApplyPartialReferencePose(this, index); // trigger refpose when a partial skeleton updates mid-pose
-		
+
+		SetupPoseReplacement(index);
 		t.Stop();
 		Ktisis.Log.Debug($"Rebuild took {t.Elapsed.TotalMilliseconds:00.00}ms");
 	}
@@ -127,6 +133,49 @@ public class EntityPose : SkeletonGroup, ISkeleton, IConfigurable {
 		foreach (var child in this.Recurse()) {
 			if (child is BoneNode bone && bone.Info.PartialIndex == index)
 				this.BoneMap[(index, bone.Info.BoneIndex)] = bone;
+		}
+	}
+	
+	public unsafe void SetupPoseReplacement(int partialId) {
+		hkaPose* pose = this.GetSkeleton()->PartialSkeletons[partialId].GetHavokPose(0);
+		if ((ulong)pose != 0) {
+
+			ReplacementPose toAdd = new ReplacementPose();
+			var p =  new Transform[pose->Skeleton->Bones.Length];
+			for(var j = 0; j < pose->Skeleton->Bones.Length; j++)
+				p[j] = new Transform();
+
+			toAdd.Pose = p;
+			toAdd.OriginalPose = pose;
+			toAdd.Owner = this;
+			toAdd.PartialIndex = (ushort)partialId;
+			toAdd.BoneCount = toAdd.OriginalPose->Skeleton->Bones.Length;
+			if (this.Transforms.TryGetValue(partialId, out _))
+				this.Transforms[partialId] = toAdd;
+			else
+				this.Transforms.Add(partialId, toAdd);
+		}
+	}
+	
+	public unsafe void SetupPoseReplacements() {
+		for (ushort i = 0; i < this.GetSkeleton()->PartialSkeletonCount; i++) {   //((CharacterBase*)(actor.CsGameObject->DrawObject))->Skeleton->PartialSkeletonCount
+			hkaPose* pose = this.GetSkeleton()->PartialSkeletons[i].GetHavokPose(0);
+			if ((ulong)pose != 0) {
+				ReplacementPose toAdd = new ReplacementPose();
+				var p =  new Transform[pose->Skeleton->Bones.Length];
+				for(var j = 0; j < pose->Skeleton->Bones.Length; j++)
+					p[j] = new Transform();
+
+				toAdd.Pose = p;
+				toAdd.OriginalPose = pose;
+				toAdd.Owner = this;
+				toAdd.PartialIndex = i;
+				toAdd.BoneCount = toAdd.OriginalPose->Skeleton->Bones.Length;
+				if (this.Transforms.TryGetValue(i, out _))
+					this.Transforms[i] = toAdd;
+				else
+					this.Transforms.Add(i, toAdd);
+			}
 		}
 	}
 

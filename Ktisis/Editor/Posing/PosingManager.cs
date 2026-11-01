@@ -31,7 +31,7 @@ using Ktisis.Structs.Helpers;
 namespace Ktisis.Editor.Posing;
 
 public class PosingManager : IPosingManager {
-	private readonly IEditorContext _context;
+	internal readonly IEditorContext _context;
 	private readonly HookScope _scope;
 	private readonly IFramework _framework;
 
@@ -46,8 +46,7 @@ public class PosingManager : IPosingManager {
 
 	private readonly PoseAutoSave AutoSave;
 
-
-	public List<ReplacementPose> PoseMap => this.PoseModule?.Poses;
+	
 
 	public PosingManager(
 		IEditorContext context,

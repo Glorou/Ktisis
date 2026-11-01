@@ -53,20 +53,16 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 		if (skeleton == null || this.GetMatrixModel() is not Matrix4x4 matrix)
 			return null;
 
-		Transform model;
-		if (this.Scene.Context.Posing.PoseMap.Exists(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex))) {
-			var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex));
-			model = Transform.setMul(new Transform(skeleton->Transform), pose.Pose[this.Info.BoneIndex])!;
-		} else {
-			model = new Transform(skeleton->Transform);
+
+		if (this.Pose.Transforms.TryGetValue(this.Info.PartialIndex, out var pose)) {
+			var model = Transform.setMul(new Transform(skeleton->Transform), pose.Pose[this.Info.BoneIndex])!;
+			matrix.Translation *= model.Scale;
+			matrix = Matrix4x4.Transform(matrix, model.Rotation);
+			matrix.Translation += model.Position;
+			return matrix;
 		}
-
-		
-
-		matrix.Translation *= model.Scale;
-		matrix = Matrix4x4.Transform(matrix, model.Rotation);
-		matrix.Translation += model.Position;
-		return matrix;
+		this.Pose.SetupPoseReplacement(this.Info.PartialIndex);
+		return null;
 	}
 
 	protected unsafe void SetMatrixWorld(Matrix4x4 transform) {
@@ -78,7 +74,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 	protected unsafe void SetMatrixWorld(Transform transform) {
 		var skeleton = this.GetSkeleton();
 		 //pose = skeleton != null ? this.GetPose() : null;
-		var pose = this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex));
+		var pose = this.Pose.Transforms[this.Info.PartialIndex];
 
 		var m = this.CalcTransformWorld();
 		if (pose.OriginalPose == null || m == null) return;
@@ -236,10 +232,10 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 	// ITransform
 
 	public unsafe virtual Transform? GetTransform() {
-		if (this.Scene.Context.Posing.PoseMap.Exists(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)))
-			return Transform.setMul(this.CalcTransformWorld(), this.Scene.Context.Posing.PoseMap.First(r => (r.Owner->Skeleton == this.GetSkeleton()) && (r.PartialIndex == this.Info.PartialIndex)).Pose[this.Info.BoneIndex]);
-		return this.CalcTransformWorld();
-	} 
+		if(this.Pose.Transforms.TryGetValue(this.Info.PartialIndex, out var pose))
+			return Transform.setMul(this.CalcTransformWorld(), pose.Pose[this.Info.BoneIndex]);
+		return null;
+	}
 	public virtual void SetTransform(Transform transform) => this.SetTransformWorld(transform);
 
 	public virtual Matrix4x4? GetMatrix() => this.CalcMatrixWorld();

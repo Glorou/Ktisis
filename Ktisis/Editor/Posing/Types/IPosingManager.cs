@@ -16,7 +16,6 @@ namespace Ktisis.Editor.Posing.Types;
 
 public interface IPosingManager : IDisposable {
 	public bool IsValid { get; }
-	public List<ReplacementPose> PoseMap { get; }
 	
 	public IAttachManager Attachments { get; }
 	public IExpressionManager Expressions { get; }
