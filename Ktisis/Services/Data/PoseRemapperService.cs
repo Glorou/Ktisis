@@ -22,8 +22,10 @@ public unsafe class PoseRemapperService {
 	public void Convert(ushort from, ushort to, PoseFile pose) {
 		var deformers = this.pbdFile.GetDeformers(from, to);
 		foreach (var deformer in deformers) {
-			deformer.BoneNames
+			
 			
 		}
 	}
+	
+	
 }

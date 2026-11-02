@@ -191,4 +191,27 @@ public class PbdFile
 
         return deformerList;
     }
+	
+	private DeformMatrix4X4? ResolveDeformation(PbdFile.Deformer deformer, string name)
+	{
+		// Try and fetch it from the PBD
+		var boneNames = deformer.BoneNames;
+		var boneIdx = Array.FindIndex(boneNames, x => x == name);
+		if (boneIdx != -1)
+		{
+			return deformer.DeformMatrices[boneIdx];
+		}
+
+		// Try and get it from the parent
+		var boneNode = BoneMap.First(b => b.BoneName.Equals(name, StringComparison.Ordinal));
+		if (boneNode.Parent != null)
+		{
+			var parent = boneNode.Parent as BoneNodeBuilder ??
+				throw new InvalidOperationException("Parent isn't a bone node");
+			return ResolveDeformation(deformer, parent.BoneName);
+		}
+
+		// No deformation, just use identity
+		return PbdFile.Deformer.Identity();
+	}
 }
