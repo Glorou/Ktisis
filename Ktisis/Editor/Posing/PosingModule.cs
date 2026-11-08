@@ -125,7 +125,7 @@ public sealed class PosingModule : HookModule {
 	private Hook<LookAtIKDelegate> _lookAtIKHook = null!;
 	private delegate nint LookAtIKDelegate(nint a1, nint a2, nint a3, float a4, nint a5, nint a6);
 
-	private nint LookAtIK(nint a1, nint a2, nint a3, float a4, nint a5, nint a6) => nint.Zero;
+	private nint LookAtIK(nint a1, nint a2, nint a3, float a4, nint a5, nint a6) => this._lookAtIKHook.Original.Invoke(a1, a2, a3, a4, a5, a6);
 	
 	// KineDriver
 
@@ -183,83 +183,17 @@ public sealed class PosingModule : HookModule {
 				this.OnTick(replacement.Value);
 		this._syncModelSpaces.Original.Invoke(first);
 	}
-	/*[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 49 8B F8")]
-	private hkaBlendDelegate _hkaBlend = null!;
-	private unsafe delegate void hkaBlendDelegate(
-		hkQsTransformf* dstOut,
-		hkQsTransformf* srcL,
-		hkQsTransformf* srcR,
-		float* alpha,
-		int n,
-		BLEND_MODE blendMode,
-		int rotationMode
-	);*/
 	
-	[Signature("48 8B C4 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 55 41 54 41 55 41 56 41 57 48 8D 68 ?? 48 81 EC ?? ?? ?? ?? 83 7D ?? ?? 4D 8B F1 0F 29 70 ?? 48 8B FA")]
-	private hkaBlendDelegate _hkaBlend = null!;
-	private unsafe delegate void hkaBlendDelegate(
-	hkQsTransformf* dstOut,
-	float* weightsOut,
-	hkQsTransformf* srcL,
-	float* weightsL,
-	hkQsTransformf* srcR,
-	float* weightsR,
-	float* alpha,
-	int n,
-	BLEND_MODE blendMode,
-	int rotationMode
-	);
-	
-	enum BLEND_MODE
-	{
-		NORMAL = 0,
-		ADDITIVE = 1,
-		SUBTRACTIVE = -1
-	};
+
 
 	public unsafe void OnTick(ReplacementPose replacementPose) {
 		
 		for (var i = 0; i < replacementPose.BoneCount; i++) {
-			hkQsTransformf* ptr = replacementPose.OriginalPose->ModelPose.Data + i;
+			hkQsTransformf* ptr = replacementPose.OriginalPose->AccessBoneModelSpace(i, hkaPose.PropagateOrNot.Propagate);
 			if(ptr != null && replacementPose.Pose.Length > i)
 				*ptr = Transform.setMul(*ptr,replacementPose.Pose[i]);
 		}
-
 		
-		
-		/*
-		float* alpha = stackalloc float[1];
-		float* weightsR = stackalloc float[replacementPose.BoneCount];
-		float* weightsL = stackalloc float[replacementPose.BoneCount];
-		float* weightsOut = stackalloc float[replacementPose.BoneCount];
-		*alpha = .5f;
-		
-		for (var i = 0; i < replacementPose.BoneCount; i++) {
-			weightsL[i] = 1f;
-			/*bool isSame = false;
-			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Rotation.ToQuaternion() == replacementPose.Pose->LocalPose.Data[i].Rotation.ToQuaternion();
-			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Translation.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Translation.ToVector3();
-			isSame |= replacementPose.OriginalPose->LocalPose.Data[i].Scale.ToVector3() == replacementPose.Pose->LocalPose.Data[i].Scale.ToVector3();
-			weightsR[i] = 1f;
-		}
-		var pid = replacementPose.Owner->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedParentBoneIndex;
-		if ( 0 <= pid && pid <= replacementPose.BoneCount)
-		{
-			/*var r = replacementPose.Pose->AccessBoneModelSpace(replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedBoneIndex, hkaPose.PropagateOrNot.Propagate);
-			var o =  replacementPose.Owner.GetCharacter()->Skeleton->PartialSkeletons[0].GetHavokPose(0)->AccessBoneModelSpace(pid, hkaPose.PropagateOrNot.Propagate);
-			r->Rotation = o->Rotation;
-			r->Scale = o->Scale;
-			r->Translation = o->Translation;
-			weightsR[replacementPose.Owner->Skeleton->PartialSkeletons[replacementPose.PartialIndex].ConnectedBoneIndex] = 0f;
-		}
-		//replacementPose.Pose->LocalPose[0] = replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data[0];
-		/*Transform temp = new Transform();
-		temp.DecomposeMatrix(HavokPosing.GetMatrix(replacementPose.OriginalPose->GetSyncedPoseLocalSpace()->Data));
-		temp.Position.X += 1;
-		var matrix = temp.ComposeMatrix()
-		//set the root to be the same
-		this._hkaBlend.Invoke(replacementPose.OriginalPose->ModelPose.Data, weightsOut, replacementPose.OriginalPose->ModelPose.Data ,weightsL,  replacementPose.Pose->ModelPose.Data, weightsR, alpha, replacementPose.BoneCount, BLEND_MODE.NORMAL, 0x0);*/
-
 	}
 	
 	public unsafe static Transform[] GetModelSpaceReferencePose(hkaPose* inPose) {

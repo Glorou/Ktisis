@@ -118,7 +118,19 @@ public class OverlayWindow : KtisisWindow {
 		var isRaySnap = this.HandleShiftRaycast(ref matrix);
 		if (isManipulate || isRaySnap) {
 			this.Transform ??= this._ctx.Transform.Begin(target);
-			this.Transform.SetTransform(new Transform(matrix, transform));
+			var m = new Transform(matrix, transform);
+			if (this._gizmo.Operation == ImGuizmoOperation.Rotate) {
+				m.Position = transform.Position;
+				m.Scale = transform.Scale;
+			} else if (this._gizmo.Operation == ImGuizmoOperation.Translate) {
+				m.Rotation = transform.Rotation;
+				m.Scale = transform.Scale;
+			} else {
+				m.Rotation = transform.Rotation;
+				m.Position = transform.Position;
+			}
+
+			this.Transform.SetTransform(m);
 		}
 
 		this._gizmo.EndFrame();

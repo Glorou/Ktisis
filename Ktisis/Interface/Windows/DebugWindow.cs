@@ -388,6 +388,10 @@ public class DebugWindow : KtisisWindow {
 				}
 				ImGui.Text($"Scale:\n\tX: {scl.X} / {t.Scale.X}\n\tY: {scl.Y} / {t.Scale.Y}\n\tZ: {scl.Z} / {t.Scale.Z}");
 			}
+			t = bone.Pose.Transforms[bone.Info.PartialIndex].Pose[bone.Info.BoneIndex];
+			ImGui.Text($"Position:\n\tX: {t.Position.X}\n\tY: {t.Position.Y}\n\tZ: {t.Position.Z}");
+			ImGui.Text($"Rotation:\n\tX: {t.Rotation.X}\n\tY: {t.Rotation.Y}\n\tZ: {t.Rotation.Z}\n\tW: {t.Rotation.W}");
+			ImGui.Text($"Scale:\n\tX: {t.Scale.X}\n\tY: {t.Scale.Y}\n\tZ: {t.Scale.Z}");
 		}
 	}
 

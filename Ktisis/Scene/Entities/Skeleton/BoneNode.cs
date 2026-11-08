@@ -55,7 +55,7 @@ public class BoneNode : SkeletonNode, ITransform, IVisibility, IAttachTarget {
 
 
 		if (this.Pose.Transforms.TryGetValue(this.Info.PartialIndex, out var pose)) {
-			var model = Transform.setMul(new Transform(skeleton->Transform), pose.Pose[this.Info.BoneIndex])!;
+			var model = new Transform(skeleton->Transform);
 			matrix.Translation *= model.Scale;
 			matrix = Matrix4x4.Transform(matrix, model.Rotation);
 			matrix.Translation += model.Position;
