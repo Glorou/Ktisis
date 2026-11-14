@@ -119,4 +119,7 @@
       <EmbeddedResource Include="Data\Images\icon_colored.png" />
       <EmbeddedResource Include="Data\Images\icon_simple.png" />
     </ItemGroup>
+    <ItemGroup>
+      <Compile Remove="Data\Files\Util\PackData.cs" />
+    </ItemGroup>
 </Project>

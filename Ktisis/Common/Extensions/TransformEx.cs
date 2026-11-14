@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 using FFXIVClientStructs.Havok.Common.Base.Math.Quaternion;
 using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
 
@@ -43,4 +44,17 @@ public static class TransformEx {
 		Z = MathF.Round(quat.Z, 4),
 		W = MathF.Round(quat.W, 4)
 	};
+
+	extension(Transform) {
+		public static Transform SetMul(Transform aTb, hkQsTransformf bTc) {
+			Transform o = new Transform();
+
+			Vector3 extraTrans = Vector3.Transform(bTc.Translation.ToVector3(), aTb.Rotation);
+			o.Position = extraTrans + aTb.Position;
+			o.Rotation = Quaternion.Multiply(aTb.Rotation, bTc.Rotation.ToQuaternion());
+			o.Scale = aTb.Scale * bTc.Scale.ToVector3();
+			
+			return o;
+		}
+	}
 }

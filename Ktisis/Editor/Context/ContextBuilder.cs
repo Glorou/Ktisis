@@ -81,6 +81,7 @@ public class ContextBuilder {
 		var autoSave = new PoseAutoSave(context, this._framework, this._format, this._sceneData);
 		
 		this._sceneData = new SceneDataService(context, this._objectTable, this._framework);
+		var ConverterService = new PoseRemapperService();
 
 		var editor = new EditorState(context, scope) {
 			Actions = actions,

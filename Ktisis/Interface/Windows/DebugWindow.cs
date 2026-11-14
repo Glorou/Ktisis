@@ -21,7 +21,10 @@ using Ktisis.Interface.Components.Transforms;
 using Ktisis.Interface.Types;
 using Ktisis.Localization;
 using Ktisis.Interface.Overlay;
+using Ktisis.Scene.Entities.Game;
 using Ktisis.Scene.Entities.Skeleton;
+using Ktisis.Scene.Types;
+using Ktisis.Services.Data;
 
 namespace Ktisis.Interface.Windows;
 
@@ -30,12 +33,15 @@ public class DebugWindow : KtisisWindow {
 	private readonly GuiManager _gui;
 	private readonly IFramework _framework;
 	private readonly TransformTable _transformTable;
+	private readonly PoseRemapperService _remapper;
 	
 	private readonly FaceLibraryGenerator _faceLibGen;
 
 	// tester inputs
 	private int _gameObjectId;
 	private bool _hasClip = false;
+	private uint _sel = 0;
+	private PoseFile? _pose = null;
 
 	// tester outputs
 	private (int, int)? _apiVersion = null;
@@ -71,7 +77,8 @@ public class DebugWindow : KtisisWindow {
 		FaceLibraryGenerator faceLibGen,
 		IDalamudPluginInterface dpi,
 		ConfigManager cfg,
-		LocaleManager locale
+		LocaleManager locale,
+		PoseRemapperService remapper
 	) : base(
 		"Debug Window", windowId:"###KtisisDebug"
 	) {
@@ -101,6 +108,8 @@ public class DebugWindow : KtisisWindow {
 		// Expression library
 		this._faceLibGen = faceLibGen;
 		this._faceLibGen.Context = this._ctx;
+
+		this._remapper = remapper;
 	}
 
 	public override void Draw() {
@@ -115,6 +124,7 @@ public class DebugWindow : KtisisWindow {
 		DrawTab("IPC Manager", this.DrawManagerTab);
 		DrawTab("Diagnostics", this.DrawDiagnosticsTab);
 		DrawTab("Expressions", this.DrawExpressionsTab);
+		DrawTab("Pose Converter", this.DrawConverterTab);
 	}
 	private static void DrawTab(string name, Action handler) {
 		using var tab = ImRaii.TabItem(name);
@@ -365,5 +375,27 @@ public class DebugWindow : KtisisWindow {
 
 		var prog = this._faceLibGen.GetStep;
 		ImGui.Text($"Generating: {prog.Current}/{prog.Max}");
+	}
+	
+	private unsafe void DrawConverterTab() {
+		if (this._ctx.Selection.GetFirstSelected()?.Type == EntityType.Actor) {
+			var valid = this._remapper.GetConvertsOnSkeleton((ActorEntity)this._ctx.Selection.GetFirstSelected());
+			using(var combo = ImRaii.Combo("Valid Converters", this._sel.ToString()))
+			{
+				if(combo.Success)
+					foreach (var num in valid) {
+						if(ImGui.Selectable(num.ToString())) {
+							this._sel = num;
+						}
+					}
+			}
+			if (ImGui.Button("Load Pose") && valid.Contains(this._sel) ) {
+				this._ctx.Interface.OpenPoseFile((a, b) => {
+					this._remapper.Convert(((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetCharacter()->Skeleton, this._sel, ref b);
+					b.Bones.Apply(((ActorEntity)this._ctx.Selection.GetFirstSelected()).GetCharacter()->Skeleton);
+				});
+			}
+		}
+
 	}
 }

@@ -26,4 +26,5 @@ public static class VectorEx {
 
 	public static Vector2 SubY(this Vector2 vec, float num)
 		=> new Vector2(vec.X, vec.Y - num);
+	
 }
